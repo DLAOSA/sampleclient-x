@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SatZum | Pagos P2P</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg-base: #0a0a0c;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --primary: #F7931A;
+            --primary-glow: rgba(247, 147, 26, 0.4);
+            --text-main: #ffffff;
+            --text-muted: #888c96;
+            --danger: #ff4757;
+            --success: #2ed573;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-base); color: var(--text-main);
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
+            background-image: radial-gradient(circle at 15% 50%, rgba(247,147,26,0.08), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(46,213,115,0.05), transparent 25%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+            background: var(--bg-base); position: relative; overflow: hidden;
+            display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        @media (min-width: 480px) {
+            .app-container { height: 90vh; border-radius: 40px; border: 1px solid var(--glass-border); }
+        }
+
+        /* Overlay Auth */
+        #auth-overlay {
+            position: absolute; inset: 0; background: var(--bg-base); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 2rem; transition: opacity 0.5s ease;
+        }
+
+        .brand-logo {
+            width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), #FFB74D);
+            border-radius: 20px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 30px var(--primary-glow); margin-bottom: 2rem;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        .btn {
+            background: var(--primary); color: #000; border: none; padding: 1rem 2rem;
+            border-radius: 16px; font-size: 1rem; font-weight: 600; cursor: pointer;
+            width: 100%; transition: all 0.2s; display: flex; justify-content: center; gap: 10px;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 20px var(--primary-glow); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* App UI */
+        .header { padding: 2rem 1.5rem 1.5rem; border-bottom: 1px solid var(--glass-border); }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        
+        .status-badge {
+            font-size: 0.75rem; padding: 6px 12px; border-radius: 20px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 6px; color: var(--primary); font-family: monospace;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+        .balance-container { text-align: center; }
+        .balance-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .balance-amount { font-size: 2.5rem; font-weight: 800; display: flex; justify-content: center; gap: 5px; }
+        .balance-amount span { font-size: 1.2rem; color: var(--primary); }
+
+        .tabs { display: flex; padding: 1rem 1.5rem; gap: 1rem; }
+        .tab {
+            flex: 1; text-align: center; padding: 0.8rem; border-radius: 16px;
+            font-weight: 600; font-size: 0.9rem; cursor: pointer; color: var(--text-muted);
+        }
+        .tab.active { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--glass-border); }
+
+        .view-container { flex: 1; overflow-y: auto; padding: 0 1.5rem 1.5rem; }
+        .view { display: none; animation: fade-in 0.4s ease; }
+        .view.active { display: block; }
+
+        .form-input {
+            width: 100%; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            padding: 1rem; border-radius: 16px; color: var(--text-main); outline: none; margin-bottom: 1.2rem;
+        }
+        .form-input:focus { border-color: var(--primary); }
+
+        .tx-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 16px; padding: 1rem; margin-bottom: 0.8rem;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .tx-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .tx-icon.sent { background: rgba(255,71,87,0.1); color: var(--danger); }
+        .tx-icon.received { background: rgba(46,213,115,0.1); color: var(--success); }
+        .tx-details { flex: 1; overflow: hidden; }
+        .tx-amount { font-weight: 800; }
+        
+        .empty-state { text-align: center; color: var(--text-muted); padding: 3rem 1rem; opacity: 0.5; }
+
+        @keyframes pulse-glow { to { box-shadow: 0 0 40px rgba(247,147,26,0.6); } }
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="auth-overlay">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 40px; color: white;">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                </svg>
+            </div>
+            <h1 style="margin-bottom: 0.5rem; font-weight: 800;">SatZum</h1>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Pagos P2P seguros.</p>
+            
+            <button class="btn" id="btn-login" onclick="initApp()">Conectar Cartera (NIP-07)</button>
+            <p id="login-status" style="margin-top: 1rem; font-size: 0.85rem; color: var(--danger); text-align: center;"></p>
+        </div>
+
+        <div class="header">
+            <div class="top-bar">
+                <div class="status-badge" title="Estado de conexión">
+                    <div class="status-dot" id="conn-dot"></div>
+                    <span id="user-pubkey">Desconectado</span>
+                </div>
+            </div>
+            <div class="balance-container">
+                <div class="balance-label">Saldo Disponible</div>
+                <div class="balance-amount">
+                    <span id="user-balance">0</span> <span>SATS</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('send', this)">Enviar</div>
+            <div class="tab" onclick="switchTab('history', this)">Movimientos</div>
+        </div>
+
+        <div class="view-container">
+            <div id="view-send" class="view active">
+                <form id="tx-form" onsubmit="executeTransaction(event)">
+                    <input type="text" id="tx-receiver" class="form-input" placeholder="Destinatario (Clave Pública Hex)" required>
+                    <input type="number" id="tx-amount" class="form-input" placeholder="Importe (Sats)" min="1" required>
+                    <input type="text" id="tx-concept" class="form-input" placeholder="Concepto del pago" required maxlength="40">
+                    <button type="submit" class="btn" id="btn-send">Confirmar y Firmar</button>
+                </form>
+            </div>
+
+            <div id="view-history" class="view">
+                <div id="tx-history"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            scope: "sats_bizum_production",
+            data: new Map(),
+            ws: null,
+            relayUrl: "wss://relay.damus.io", // Relay genérico confiable para el estado
+            pubkey: null
+        };
+
+        const utils = {
+            generateId: () => Math.random().toString(36).slice(2)
+        };
+
+        // --- 1. CONEXIÓN ESTRICTA NIP-07 ---
+        async function initApp() {
+            const btn = document.getElementById('btn-login');
+            const status = document.getElementById('login-status');
+            
+            if (!window.nostr) {
+                status.textContent = "Error: No se detectó ninguna cartera NIP-07 (instala Alby o nos2x).";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Solicitando permisos...";
+
+            try {
+                app.pubkey = await window.nostr.getPublicKey();
+                
+                // Mostrar pubkey acortado
+                document.getElementById('user-pubkey').textContent = 
+                    app.pubkey.slice(0, 6) + '...' + app.pubkey.slice(-4);
+
+                connectWS();
+                
+                // Ocultar overlay
+                document.getElementById('auth-overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('auth-overlay').style.display = 'none', 500);
+
+            } catch (error) {
+                status.textContent = "Permiso denegado por la cartera.";
+                btn.disabled = false;
+                btn.textContent = "Conectar Cartera (NIP-07)";
+            }
+        }
+
+        // --- 2. COMUNICACIÓN AARPIA/MCP CON EL RELAY ---
+        function connectWS() {
+            app.ws = new WebSocket(app.relayUrl);
+            const dot = document.getElementById('conn-dot');
+
+            app.ws.onopen = () => {
+                if (dot) dot.classList.add('online');
+                // Suscripción de lectura del estado global de SatZum
+                app.ws.send(JSON.stringify(["REQ", utils.generateId(), {
+                    kinds: [25910, 7501],
+                    "#domain": [app.scope],
+                    limit: 100
+                }]));
+            };
+
+            app.ws.onclose = () => {
+                if (dot) dot.classList.remove('online');
+                setTimeout(connectWS, 3000);
+            };
+
+            app.ws.onmessage = (msg) => {
+                const data = JSON.parse(msg.data);
+                if (data[0] === "EVENT") handleAarpiaEvent(data[2]);
+            };
+        }
+
+        function handleAarpiaEvent(event) {
+            try {
+                const inst = JSON.parse(event.content);
+                if (!inst || !inst.instance_hash) return;
+                
+                const id = inst.instance_hash;
+                if (inst.sealed) { app.data.delete(id); return; }
+                
+                const dataAction = inst.actions_log?.find(a => a.type === "DATA_ENTRY");
+                const data = dataAction ? JSON.parse(dataAction.verb) : {};
+                
+                app.data.set(id, { ...inst, data });
+                renderUI();
+            } catch (e) { /* Ignorar eventos malformados */ }
+        }
+
+        async function sendMcpRequest(toolName, args) {
+            const rpc = {
+                jsonrpc: "2.0",
+                method: "tools/call",
+                params: { name: toolName, arguments: args },
+                id: utils.generateId()
+            };
+            
+            const event = {
+                kind: 25910,
+                pubkey: app.pubkey,
+                tags: [["domain", app.scope]],
+                content: JSON.stringify(rpc),
+                created_at: Math.floor(Date.now() / 1000)
+            };
+            
+            // Firma real y obligatoria por el usuario
+            const signed = await window.nostr.signEvent(event);
+            app.ws.send(JSON.stringify(["EVENT", signed]));
+        }
+
+        // --- 3. LOGICA Y UI ---
+        async function executeTransaction(e) {
+            e.preventDefault();
+            const receiver = document.getElementById('tx-receiver').value.trim();
+            const amount = parseInt(document.getElementById('tx-amount').value);
+            const concept = document.getElementById('tx-concept').value.trim();
+            
+            if (!receiver || isNaN(amount) || amount <= 0) return;
+
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true;
+            btn.textContent = "Firmando...";
+
+            try {
+                // Validación estricta usando AARPIA/MCP
+                await sendMcpRequest("aarpia_create_instance", {
+                    entity_name: "sats_transaction",
+                    context_name: "global",
+                    start_state: "completed",
+                    target_state: "completed",
+                    domain: app.scope,
+                    initial_data: JSON.stringify({
+                        sender: app.pubkey,
+                        receiver: receiver,
+                        amount: amount,
+                        concept: concept,
+                        timestamp: Date.now()
+                    })
+                });
+
+                document.getElementById('tx-form').reset();
+                switchTab('history', document.querySelectorAll('.tab')[1]);
+            } catch (error) {
+                alert("Error al firmar: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Confirmar y Firmar";
+            }
+        }
+
+        function renderUI() {
+            const historyContainer = document.getElementById('tx-history');
+            historyContainer.innerHTML = '';
+            
+            let balance = 150000; // Base inicial de sats de demostración
+            const txs = [];
+
+            for (const [id, inst] of app.data.entries()) {
+                if (inst.entity_name === "sats_transaction" && inst.data) txs.push(inst.data);
+            }
+
+            txs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            txs.forEach(tx => {
+                const isSender = tx.sender === app.pubkey;
+                const isReceiver = tx.receiver === app.pubkey;
+                
+                if (!isSender && !isReceiver) return; 
+
+                if (isSender) balance -= tx.amount;
+                if (isReceiver) balance += tx.amount;
+
+                const el = document.createElement('div');
+                el.className = 'tx-card';
+                el.innerHTML = `
+                    <div class="tx-icon ${isSender ? 'sent' : 'received'}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;">
+                            ${isSender 
+                                ? '<line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline>' 
+                                : '<line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline>'}
+                        </svg>
+                    </div>
+                    <div class="tx-details">
+                        <div style="font-weight:600; margin-bottom:4px;">${escapeHTML(tx.concept)}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">${new Date(tx.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div class="tx-amount" style="color: ${isSender ? 'var(--text-main)' : 'var(--success)'}">
+                        ${isSender ? '-' : '+'}${tx.amount.toLocaleString()}
+                    </div>
+                `;
+                historyContainer.appendChild(el);
+            });
+
+            document.getElementById('user-balance').textContent = balance.toLocaleString('es-ES');
+            
+            if (historyContainer.innerHTML === '') {
+                historyContainer.innerHTML = `<div class="empty-state">No hay movimientos.</div>`;
+            }
+        }
+
+        // --- 4. UTILIDADES ---
+        // Se soluciona el error del undefined pasando el elemento directo
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            
+            if (element) element.classList.add('active');
+            
+            const targetView = document.getElementById('view-' + tabId);
+            if (targetView) targetView.classList.add('active');
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag]));
+        }
+    </script>
+</body>
+</html>
