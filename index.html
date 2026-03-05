@@ -109,8 +109,6 @@
 
         @keyframes pulse-glow { to { box-shadow: 0 0 40px rgba(247,147,26,0.6); } }
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        .spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -123,9 +121,9 @@
                 </svg>
             </div>
             <h1 style="margin-bottom: 0.5rem; font-weight: 800;">SatZum</h1>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Pagos P2P seguros.</p>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Ledger P2P (AARPIA)</p>
             
-            <button class="btn" id="btn-login" onclick="initApp()">Conectar Cartera (NIP-07)</button>
+            <button class="btn" id="btn-login" onclick="initApp()">Conectar Cartera</button>
             <p id="login-status" style="margin-top: 1rem; font-size: 0.85rem; color: var(--danger); text-align: center;"></p>
         </div>
 
@@ -137,7 +135,7 @@
                 </div>
             </div>
             <div class="balance-container">
-                <div class="balance-label">Saldo Disponible</div>
+                <div class="balance-label">Saldo en Ledger</div>
                 <div class="balance-amount">
                     <span id="user-balance">0</span> <span>SATS</span>
                 </div>
@@ -145,8 +143,8 @@
         </div>
 
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('send', this)">Enviar</div>
-            <div class="tab" onclick="switchTab('history', this)">Movimientos</div>
+            <div class="tab active" data-tab="send" onclick="switchTab('send')">Enviar</div>
+            <div class="tab" data-tab="history" onclick="switchTab('history')">Movimientos</div>
         </div>
 
         <div class="view-container">
@@ -155,7 +153,7 @@
                     <input type="text" id="tx-receiver" class="form-input" placeholder="Destinatario (Clave Pública Hex)" required>
                     <input type="number" id="tx-amount" class="form-input" placeholder="Importe (Sats)" min="1" required>
                     <input type="text" id="tx-concept" class="form-input" placeholder="Concepto del pago" required maxlength="40">
-                    <button type="submit" class="btn" id="btn-send">Confirmar y Firmar</button>
+                    <button type="submit" class="btn" id="btn-send">Firmar Transacción</button>
                 </form>
             </div>
 
@@ -170,7 +168,8 @@
             scope: "sats_bizum_production",
             data: new Map(),
             ws: null,
-            relayUrl: "wss://relay.damus.io", // Relay genérico confiable para el estado
+            // Actualizado al relé fallback de AARPIA que permite indexar el tag "#domain"
+            relayUrl: "wss://sites-smithsonian-beginning-nights.trycloudflare.com", 
             pubkey: null
         };
 
@@ -178,13 +177,12 @@
             generateId: () => Math.random().toString(36).slice(2)
         };
 
-        // --- 1. CONEXIÓN ESTRICTA NIP-07 ---
         async function initApp() {
             const btn = document.getElementById('btn-login');
             const status = document.getElementById('login-status');
             
             if (!window.nostr) {
-                status.textContent = "Error: No se detectó ninguna cartera NIP-07 (instala Alby o nos2x).";
+                status.textContent = "Error: No se detectó la extensión Nostr (ej. Alby).";
                 return;
             }
 
@@ -193,36 +191,31 @@
 
             try {
                 app.pubkey = await window.nostr.getPublicKey();
-                
-                // Mostrar pubkey acortado
                 document.getElementById('user-pubkey').textContent = 
                     app.pubkey.slice(0, 6) + '...' + app.pubkey.slice(-4);
 
                 connectWS();
                 
-                // Ocultar overlay
                 document.getElementById('auth-overlay').style.opacity = '0';
                 setTimeout(() => document.getElementById('auth-overlay').style.display = 'none', 500);
 
             } catch (error) {
                 status.textContent = "Permiso denegado por la cartera.";
                 btn.disabled = false;
-                btn.textContent = "Conectar Cartera (NIP-07)";
+                btn.textContent = "Conectar Cartera";
             }
         }
 
-        // --- 2. COMUNICACIÓN AARPIA/MCP CON EL RELAY ---
         function connectWS() {
             app.ws = new WebSocket(app.relayUrl);
             const dot = document.getElementById('conn-dot');
 
             app.ws.onopen = () => {
                 if (dot) dot.classList.add('online');
-                // Suscripción de lectura del estado global de SatZum
+                // Al estar en el relé de AARPIA, este tag será aceptado sin error de indexado
                 app.ws.send(JSON.stringify(["REQ", utils.generateId(), {
                     kinds: [25910, 7501],
-                    "#domain": [app.scope],
-                    limit: 100
+                    "#domain": [app.scope]
                 }]));
             };
 
@@ -250,7 +243,7 @@
                 
                 app.data.set(id, { ...inst, data });
                 renderUI();
-            } catch (e) { /* Ignorar eventos malformados */ }
+            } catch (e) {}
         }
 
         async function sendMcpRequest(toolName, args) {
@@ -269,12 +262,15 @@
                 created_at: Math.floor(Date.now() / 1000)
             };
             
-            // Firma real y obligatoria por el usuario
             const signed = await window.nostr.signEvent(event);
-            app.ws.send(JSON.stringify(["EVENT", signed]));
+            
+            if(app.ws && app.ws.readyState === WebSocket.OPEN) {
+                app.ws.send(JSON.stringify(["EVENT", signed]));
+            } else {
+                throw new Error("No hay conexión con el relé.");
+            }
         }
 
-        // --- 3. LOGICA Y UI ---
         async function executeTransaction(e) {
             e.preventDefault();
             const receiver = document.getElementById('tx-receiver').value.trim();
@@ -288,7 +284,6 @@
             btn.textContent = "Firmando...";
 
             try {
-                // Validación estricta usando AARPIA/MCP
                 await sendMcpRequest("aarpia_create_instance", {
                     entity_name: "sats_transaction",
                     context_name: "global",
@@ -305,12 +300,13 @@
                 });
 
                 document.getElementById('tx-form').reset();
-                switchTab('history', document.querySelectorAll('.tab')[1]);
+                // Cambiado para evitar el error "undefined (reading 'add')"
+                switchTab('history');
             } catch (error) {
-                alert("Error al firmar: " + error.message);
+                alert("Hubo un error al procesar: " + error.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = "Confirmar y Firmar";
+                btn.textContent = "Firmar Transacción";
             }
         }
 
@@ -318,7 +314,8 @@
             const historyContainer = document.getElementById('tx-history');
             historyContainer.innerHTML = '';
             
-            let balance = 150000; // Base inicial de sats de demostración
+            // Inicia en 0. Solo reflejará saldo interno de la red AARPIA.
+            let balance = 0; 
             const txs = [];
 
             for (const [id, inst] of app.data.entries()) {
@@ -360,24 +357,25 @@
             document.getElementById('user-balance').textContent = balance.toLocaleString('es-ES');
             
             if (historyContainer.innerHTML === '') {
-                historyContainer.innerHTML = `<div class="empty-state">No hay movimientos.</div>`;
+                historyContainer.innerHTML = `<div class="empty-state">No hay movimientos en tu Ledger AARPIA.</div>`;
             }
         }
 
-        // --- 4. UTILIDADES ---
-        // Se soluciona el error del undefined pasando el elemento directo
-        function switchTab(tabId, element) {
+        // Lógica corregida para navegar entre pestañas
+        function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             
-            if (element) element.classList.add('active');
+            const targetTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+            if (targetTab) targetTab.classList.add('active');
             
             const targetView = document.getElementById('view-' + tabId);
             if (targetView) targetView.classList.add('active');
         }
 
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag]));
+            if (!str) return '';
+            return str.toString().replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag]));
         }
     </script>
 </body>
