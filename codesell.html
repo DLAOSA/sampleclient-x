@@ -774,13 +774,22 @@
             },
 
             ui: {
-              showMainApp: () => {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-    // CORRECCIÓN: Pasamos el hex string directamente, npubEncode se encarga del resto
-    const npub = window.NostrTools.nip19.npubEncode(app.state.pubkey);
-    document.getElementById('ui-npub').innerText = npub.substring(0, 9) + '...' + npub.slice(-4);
-},
+             showMainApp: () => {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+                    
+                    try {
+                        // Aseguramos que sea un string y no intentamos pasarlo a bytes
+                        const pkString = String(app.state.pubkey);
+                        const npub = window.NostrTools.nip19.npubEncode(pkString);
+                        document.getElementById('ui-npub').innerText = npub.substring(0, 9) + '...' + npub.slice(-4);
+                    } catch(e) {
+                        console.warn("Aviso de codificación (ignorado):", e);
+                        // Fallback: si la librería falla, mostramos el hex truncado para que la app no se congele
+                        const fallbackId = String(app.state.pubkey);
+                        document.getElementById('ui-npub').innerText = fallbackId.substring(0, 8) + '...';
+                    }
+                },
 
                 setConnectionStatus: (text, isOnline) => {
                     const ind = document.getElementById('ui-connection');
