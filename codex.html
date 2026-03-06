@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CODEX — Mercado de Código Underground</title>
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080c10;
+            --surface: #0d1117;
+            --panel: #111820;
+            --border: #1e2d3d;
+            --accent: #00ff88;
+            --accent2: #00b8ff;
+            --accent3: #ff3e6c;
+            --text: #cdd9e5;
+            --muted: #4d6072;
+            --mono: 'JetBrains Mono', monospace;
+            --sans: 'Space Grotesk', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* SCANLINE EFFECT */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, .03) 2px, rgba(0, 0, 0, .03) 4px);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* NOISE / GRAIN */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 998;
+            opacity: .4;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* GLITCH ANIMATION */
+        @keyframes glitch {
+
+            0%,
+            100% {
+                transform: translate(0);
+            }
+
+            20% {
+                transform: translate(-2px, 1px);
+            }
+
+            40% {
+                transform: translate(2px, -1px);
+            }
+
+            60% {
+                transform: translate(-1px, 2px);
+            }
+
+            80% {
+                transform: translate(1px, -2px);
+            }
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 136, .4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 255, 136, 0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spinLine {
+            from {
+                stroke-dashoffset: 200
+            }
+
+            to {
+                stroke-dashoffset: 0
+            }
+        }
+
+        /* ── HEADER ─────────────────────────── */
+        header {
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(8, 12, 16, .9);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-family: var(--mono);
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -.02em;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo span {
+            color: var(--text);
+            opacity: .3;
+        }
+
+        .logo-bracket {
+            color: var(--muted);
+        }
+
+        .logo-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.1em;
+            background: var(--accent);
+            margin-left: 2px;
+            animation: blink 1.2s step-end infinite;
+            vertical-align: middle;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent3);
+            position: relative;
+        }
+
+        .conn-dot.connected {
+            background: var(--accent);
+            animation: pulse-green 2s infinite;
+        }
+
+        .npub-chip {
+            font-family: var(--mono);
+            font-size: .75rem;
+            color: var(--muted);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        .balance-chip {
+            font-family: var(--mono);
+            font-size: .8rem;
+            color: var(--accent);
+            background: rgba(0, 255, 136, .06);
+            border: 1px solid rgba(0, 255, 136, .2);
+            padding: 4px 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        btn-ghost {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: .75rem;
+            transition: all .2s;
+        }
+
+        /* ── LOGIN SCREEN ──────────────────── */
+        #login-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(0, 255, 136, .04) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 184, 255, .04) 0%, transparent 60%);
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 440px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            overflow: hidden;
+            animation: fadeIn .5s ease;
+        }
+
+        .login-header {
+            padding: 28px 28px 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+        }
+
+        .login-header h1 {
+            font-family: var(--mono);
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .login-header h1 em {
+            color: var(--text);
+            font-style: normal;
+            font-weight: 300;
+        }
+
+        .login-header p {
+            font-size: .85rem;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        .login-body {
+            padding: 24px 28px;
+        }
+
+        .terminal-line {
+            font-family: var(--mono);
+            font-size: .8rem;
+            color: var(--muted);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-line::before {
+            content: '$ ';
+            color: var(--accent);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-family: var(--mono);
+            font-size: .85rem;
+            cursor: pointer;
+            border: none;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            letter-spacing: .03em;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #00e67a;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent2);
+            color: var(--accent2);
+        }
+
+        /* ── APP LAYOUT ─────────────────────── */
+        #app-screen {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .app-body {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            flex: 1;
+        }
+
+        /* SIDEBAR */
+        aside {
+            border-right: 1px solid var(--border);
+            padding: 20px 12px;
+            background: var(--surface);
+            position: sticky;
+            top: 60px;
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-label {
+            font-family: var(--mono);
+            font-size: .65rem;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--muted);
+            padding: 0 8px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .85rem;
+            color: var(--muted);
+            transition: all .15s;
+            border: 1px solid transparent;
+            font-family: var(--mono);
+        }
+
+        .nav-item svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .nav-item:hover {
+            background: var(--panel);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: rgba(0, 255, 136, .06);
+            color: var(--accent);
+            border-color: rgba(0, 255, 136, .15);
+        }
+
+        .scope-box {
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            font-family: var(--mono);
+            font-size: .7rem;
+            color: var(--muted);
+        }
+
+        .scope-val {
+            color: var(--accent2);
+            font-weight: 700;
+        }
+
+        /* MAIN */
+        main {
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn .3s ease;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title small {
+            font-family: var(--mono);
+            font-size: .75rem;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        /* LISTINGS GRID */
+        .listings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .listing-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            overflow: hidden;
+            transition: all .2s;
+            cursor: pointer;
+            animation: fadeIn .3s ease;
+        }
+
+        .listing-card:hover {
+            border-color: rgba(0, 255, 136, .3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 255, 136, .05);
+        }
+
+        .card-top {
+            background: var(--panel);
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: .75rem;
+            color: var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .lang-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: .65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .lang-js {
+            background: rgba(255, 220, 0, .1);
+            color: #ffdc00;
+        }
+
+        .lang-py {
+            background: rgba(0, 184, 255, .1);
+            color: var(--accent2);
+        }
+
+        .lang-rs {
+            background: rgba(255, 62, 108, .1);
+            color: var(--accent3);
+        }
+
+        .lang-go {
+            background: rgba(0, 255, 136, .1);
+            color: var(--accent);
+        }
+
+        .lang-ts {
+            background: rgba(0, 184, 255, .15);
+            color: #60b8ff;
+        }
+
+        .lang-sh {
+            background: rgba(150, 100, 255, .1);
+            color: #b87fff;
+        }
+
+        .lang-other {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        .card-name {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        .card-desc {
+            font-size: .82rem;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 12px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-price {
+            font-family: var(--mono);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .card-price small {
+            font-size: .7rem;
+            color: var(--muted);
+        }
+
+        .card-author {
+            font-family: var(--mono);
+            font-size: .7rem;
+            color: var(--muted);
+        }
+
+        .btn-buy {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 6px;
+            font-family: var(--mono);
+            font-size: .8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .2s;
+            letter-spacing: .05em;
+        }
+
+        .btn-buy:hover {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* SELL FORM */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            max-width: 700px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full {
+            grid-column: 1/-1;
+        }
+
+        .form-label {
+            font-family: var(--mono);
+            font-size: .72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .form-input {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: .85rem;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 255, 136, .08);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        select.form-input {
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            margin-top: 8px;
+            padding: 12px 24px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            font-family: var(--mono);
+            font-weight: 800;
+            font-size: .85rem;
+            cursor: pointer;
+            transition: all .2s;
+            letter-spacing: .05em;
+        }
+
+        .submit-btn:hover {
+            background: #00e67a;
+        }
+
+        .submit-btn:disabled {
+            opacity: .4;
+            cursor: wait;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .8);
+            backdrop-filter: blur(8px);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(16px);
+            transition: transform .2s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1.3rem;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--accent3);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-price {
+            font-family: var(--mono);
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin: 12px 0;
+        }
+
+        .modal-desc {
+            font-size: .9rem;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .modal-meta {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-family: var(--mono);
+            font-size: .75rem;
+            color: var(--muted);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .meta-item strong {
+            color: var(--text);
+            display: block;
+        }
+
+        /* TOAST */
+        #toast-box {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-family: var(--mono);
+            font-size: .8rem;
+            animation: fadeIn .3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 260px;
+        }
+
+        .toast.success {
+            border-left: 3px solid var(--accent);
+        }
+
+        .toast.error {
+            border-left: 3px solid var(--accent3);
+        }
+
+        .toast.info {
+            border-left: 3px solid var(--accent2);
+        }
+
+        /* EMPTY STATE */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: .85rem;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+        }
+
+        .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            display: block;
+            opacity: .3;
+        }
+
+        /* NSEC BANNER */
+        .nsec-banner {
+            margin: 16px 28px;
+            background: rgba(255, 62, 108, .06);
+            border: 1px solid rgba(255, 62, 108, .2);
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-family: var(--mono);
+            font-size: .75rem;
+            color: var(--accent3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nsec-code {
+            background: var(--panel);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: .7rem;
+            cursor: pointer;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text);
+        }
+
+        /* LOADER */
+        .loader {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 255, 136, .2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* STATS ROW */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+        }
+
+        .stat-val {
+            font-family: var(--mono);
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: .78rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>COD<em>EX</em><span class="logo-cursor"></span></h1>
+                <p>// mercado underground de snippets &amp; scripts</p>
+            </div>
+            <div class="login-body">
+                <div class="terminal-line">init session --auth</div>
+                <button class="btn btn-primary" onclick="loginAlby()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                    </svg>
+                    Conectar Wallet (Alby)
+                </button>
+                <button class="btn btn-secondary" onclick="genIdentity()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Identidad Anónima (1 clic)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app-screen" class="hidden">
+        <header>
+            <div class="logo">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2.5">
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                </svg>
+                COD<span>/</span>EX<span class="logo-cursor"></span>
+            </div>
+            <div class="header-right">
+                <div id="balance-chip" class="balance-chip">⚡ <span id="balance-val">0</span> sats</div>
+                <div id="npub-chip" class="npub-chip">anon</div>
+                <div id="conn-dot" class="conn-dot" title="Estado conexión"></div>
+            </div>
+        </header>
+
+        <div id="nsec-banner-wrap"></div>
+
+        <div class="app-body">
+            <aside>
+                <div class="nav-section">
+                    <div class="nav-label">Explorar</div>
+                    <div class="nav-item active" onclick="goPage('page-market',this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" />
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                        </svg> Mercado
+                    </div>
+                    <div class="nav-item" onclick="goPage('page-sell',this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg> Vender Código
+                    </div>
+                    <div class="nav-item" onclick="goPage('page-my',this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg> Mis Listados
+                    </div>
+                </div>
+                <div class="scope-box">
+                    <div>Mercado ID</div>
+                    <div class="scope-val" id="scope-label">---</div>
+                    <div style="margin-top:8px;">
+                        <input id="scope-in"
+                            style="background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:.7rem;padding:4px 6px;border-radius:4px;width:80%;outline:none;"
+                            maxlength="8" placeholder="cambiar ID">
+                        <button onclick="changeScope()"
+                            style="background:var(--accent);border:none;color:#000;font-family:var(--mono);font-size:.65rem;padding:4px 6px;border-radius:4px;cursor:pointer;margin-top:4px;width:80%;font-weight:700;">OK</button>
+                    </div>
+                </div>
+            </aside>
+
+            <main>
+                <!-- MARKET PAGE -->
+                <div id="page-market" class="page active">
+                    <div class="page-header">
+                        <div class="page-title">
+                            Mercado <small>// snippets &amp; scripts en venta</small>
+                        </div>
+                        <button onclick="loadListings()" class="btn-primary"
+                            style="padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--border);color:var(--text);">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <path d="M23 4v6h-6" />
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                            </svg> Refresh
+                        </button>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-val" id="stat-total">0</div>
+                            <div class="stat-label">Listados totales</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val" id="stat-active">0</div>
+                            <div class="stat-label">Disponibles</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val" id="stat-sold">0</div>
+                            <div class="stat-label">Vendidos</div>
+                        </div>
+                    </div>
+                    <div class="listings-grid" id="listings-grid">
+                        <div class="empty"><span class="empty-icon">⬡</span>Cargando mercado...</div>
+                    </div>
+                </div>
+
+                <!-- SELL PAGE -->
+                <div id="page-sell" class="page">
+                    <div class="page-header">
+                        <div class="page-title">Vender <small>// publica tu trabajo</small></div>
+                    </div>
+                    <form onsubmit="submitListing(event)">
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label class="form-label">Nombre del Producto</label>
+                                <input id="f-name" class="form-input" required
+                                    placeholder="ej: Discord Rate Limiter Bypass v2">
+                            </div>
+                            <div class="form-group full">
+                                <label class="form-label">Descripción</label>
+                                <textarea id="f-desc" class="form-input" required
+                                    placeholder="Qué hace, qué problema resuelve, cómo usarlo..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Lenguaje</label>
+                                <select id="f-lang" class="form-input">
+                                    <option value="JavaScript">JavaScript</option>
+                                    <option value="TypeScript">TypeScript</option>
+                                    <option value="Python">Python</option>
+                                    <option value="Rust">Rust</option>
+                                    <option value="Go">Go</option>
+                                    <option value="Shell">Shell / Bash</option>
+                                    <option value="Otros">Otros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Precio (sats)</label>
+                                <input id="f-price" class="form-input" type="number" min="1" required
+                                    placeholder="ej: 5000">
+                            </div>
+                            <div class="form-group full">
+                                <label class="form-label">Tu Lightning Address (para recibir pagos)</label>
+                                <input id="f-lnaddr" class="form-input" type="text" required
+                                    placeholder="usuario@getalby.com">
+                            </div>
+                            <div class="form-group full">
+                                <label class="form-label">Código / Contenido (se entregará al comprador)</label>
+                                <textarea id="f-code" class="form-input" required
+                                    style="min-height:120px;font-family:var(--mono);font-size:.78rem;"
+                                    placeholder="// Pega aquí tu código o el enlace privado de descarga..."></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-btn" id="submit-btn">⟩ Publicar Listado</button>
+                    </form>
+                </div>
+
+                <!-- MY LISTINGS PAGE -->
+                <div id="page-my" class="page">
+                    <div class="page-header">
+                        <div class="page-title">Mis Listados <small>// publicados por ti</small></div>
+                    </div>
+                    <div class="listings-grid" id="my-grid">
+                        <div class="empty"><span class="empty-icon">⬡</span>No has publicado nada aún.</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- PRODUCT MODAL -->
+    <div class="modal-overlay" id="product-modal" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <div id="m-lang-badge" class="lang-badge">JS</div>
+                    <h3 id="m-name" style="margin-top:8px;">Producto</h3>
+                </div>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-price" id="m-price">0 <small style="font-size:1rem;">sats</small></div>
+                <p class="modal-desc" id="m-desc"></p>
+                <div class="modal-meta">
+                    <div class="meta-item"><strong id="m-lang">—</strong>Lenguaje</div>
+                    <div class="meta-item"><strong id="m-seller">—</strong>Vendedor</div>
+                    <div class="meta-item"><strong id="m-state">disponible</strong>Estado</div>
+                    <div class="meta-item"><strong id="m-date">—</strong>Publicado</div>
+                </div>
+                <button id="buy-btn" class="btn btn-primary" onclick="buyProduct()">
+                    ⚡ Pagar y Descargar
+                </button>
+                <div id="purchase-result"
+                    style="display:none;margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;font-family:var(--mono);font-size:.78rem;color:var(--accent);word-break:break-all;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-box"></div>
+
+    <script>
+        // ══════════════════════════════════════════
+        //  CONFIGURACIÓN
+        // ══════════════════════════════════════════
+        const DISCOVERY_RELAYS = ['wss://relay.damus.io', 'wss://relay.contextvm.org', 'wss://relay2.contextvm.org'];
+        const RELAY_PUBKEY = '1bdc9826c1c2537acc0c288fcf73af8f6638f7b3941a4f70414bc6929338d521';
+        const CONTEXT_NAME = 'codex_market';
+
+        const s = {
+            pubkey: null,
+            privkey: null, // Uint8Array si identidad local
+            ws: null,
+            wsUrl: null,
+            httpUrl: null,
+            connected: false,
+            scope: null,
+            balance: null,
+            hasWebln: false,
+            listings: [],
+            currentProduct: null,
+            pending: new Map()
+        };
+
+        // ── UTILS ──────────────────────────────────
+        const short = (str, n = 8) => str ? str.slice(0, n) + '…' : '—';
+        const fmtDate = ts => ts ? new Intl.DateTimeFormat('es', { dateStyle: 'short' }).format(new Date(ts * 1000)) : '—';
+
+        function toast(msg, type = 'info') {
+            const box = document.getElementById('toast-box');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            const icons = { success: '✓', error: '✗', info: '›' };
+            t.innerHTML = `<span>${icons[type] || '›'}</span> ${msg}`;
+            box.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
+        }
+
+        function langClass(l = '') {
+            const m = { JavaScript: 'js', TypeScript: 'ts', Python: 'py', Rust: 'rs', Go: 'go', 'Shell': 'sh', 'Shell / Bash': 'sh' };
+            return 'lang-' + (m[l] || 'other');
+        }
+
+        // ── SCOPE ──────────────────────────────────
+        function initScope() {
+            let sc = localStorage.getItem('codex_scope');
+            if (!sc) { sc = Math.random().toString(36).slice(2, 8).toUpperCase(); localStorage.setItem('codex_scope', sc); }
+            s.scope = sc;
+            document.getElementById('scope-label').textContent = sc;
+            document.getElementById('scope-in').value = sc;
+        }
+
+        function changeScope() {
+            const v = document.getElementById('scope-in').value.trim().toUpperCase();
+            if (v.length < 3) return toast('ID mínimo 3 caracteres', 'error');
+            localStorage.setItem('codex_scope', v);
+            s.scope = v;
+            document.getElementById('scope-label').textContent = v;
+            toast('Mercado cambiado a: ' + v, 'success');
+            loadListings();
+        }
+
+        // ── AUTH ───────────────────────────────────
+        async function loginAlby() {
+            if (!window.nostr) { alert('Instala la extensión Alby (getalby.com) para usar CODEX con pagos reales.'); return; }
+            try {
+                s.pubkey = await window.nostr.getPublicKey();
+                if (window.webln) {
+                    await window.webln.enable();
+                    s.hasWebln = true;
+                    const b = await window.webln.getBalance();
+                    s.balance = b.balance;
+                    const chip = document.getElementById('balance-chip');
+                    chip.style.display = 'flex';
+                    document.getElementById('balance-val').textContent = s.balance.toLocaleString();
+                }
+                startApp();
+            } catch (e) { toast('Error conectando wallet: ' + e.message, 'error'); }
+        }
+
+        function genIdentity() {
+            const sk = window.NostrTools.generateSecretKey();
+            const pk = window.NostrTools.getPublicKey(sk);
+            s.privkey = sk;
+            s.pubkey = pk;
+            localStorage.setItem('codex_sk', Array.from(sk).map(b => b.toString(16).padStart(2, '0')).join(''));
+            localStorage.setItem('codex_pk', pk);
+            startApp();
+            const nsec = window.NostrTools.nip19.nsecEncode(sk);
+            document.getElementById('nsec-banner-wrap').innerHTML = `
+    <div class="nsec-banner">
+      <span>⚠ Guarda tu clave secreta:</span>
+      <span class="nsec-code" onclick="navigator.clipboard.writeText('${nsec}');toast('Copiada','success')" title="Clic para copiar">${nsec}</span>
+      <button onclick="this.closest('.nsec-banner').remove()" style="background:none;border:none;color:var(--accent3);cursor:pointer;font-size:1rem;">✕</button>
+    </div>`;
+        }
+
+        function startApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            const npubEl = document.getElementById('npub-chip');
+            try { npubEl.textContent = short(window.NostrTools.nip19.npubEncode(s.pubkey), 12); }
+            catch (e) { npubEl.textContent = short(s.pubkey); }
+            discoverRelay();
+        }
+
+        // ── DISCOVERY ─────────────────────────────
+        async function discoverRelay() {
+            let found = false;
+            const tryR = url => new Promise(resolve => {
+                const ws = new WebSocket(url);
+                ws.onopen = () => ws.send(JSON.stringify(["REQ", "disc", { kinds: [11316], authors: [RELAY_PUBKEY], limit: 1 }]));
+                ws.onmessage = e => {
+                    const d = JSON.parse(e.data);
+                    if (d[0] === 'EVENT') {
+                        const rt = d[2].tags.find(t => t[0] === 'r');
+                        if (rt && !found) { found = true; ws.close(); connectRelay(rt[1]); }
+                    }
+                    if (d[0] === 'EOSE') { ws.close(); resolve(); }
+                };
+                ws.onerror = () => { ws.close(); resolve(); };
+                setTimeout(() => { ws.close(); resolve(); }, 5000);
+            });
+            for (const u of DISCOVERY_RELAYS) { if (found) break; await tryR(u); }
+            if (!found) connectRelay('ws://localhost:3334');
+        }
+
+        function connectRelay(url) {
+            s.wsUrl = url;
+            s.httpUrl = url.replace('wss://', 'https://').replace('ws://', 'http://');
+            const ws = new WebSocket(url);
+            ws.onopen = () => {
+                s.connected = true; s.ws = ws;
+                document.getElementById('conn-dot').classList.add('connected');
+                // CRÍTICO: el relay responde con kind 25910 (NO 25911), firmado por RELAY_PUBKEY
+                // y tagged con ["p", clientPubkey]. Sin esta suscripción → timeout siempre.
+                ws.send(JSON.stringify(["REQ", "mcp_resp", {
+                    kinds: [25910],
+                    authors: [RELAY_PUBKEY],
+                    "#p": [s.pubkey]
+                }]));
+                toast('Conectado al relay', 'success');
+                loadListings();
+                loadMyListings();
+            };
+            ws.onmessage = handleWS;
+            ws.onclose = () => {
+                s.connected = false;
+                document.getElementById('conn-dot').classList.remove('connected');
+                setTimeout(() => connectRelay(url), 5000);
+            };
+        }
+
+        function handleWS(e) {
+            const d = JSON.parse(e.data);
+            if (d[0] === 'EVENT' && d[2]) {
+                const ev = d[2];
+                try {
+                    const content = JSON.parse(ev.content);
+                    if (content.id && s.pending.has(String(content.id))) {
+                        const p = s.pending.get(String(content.id));
+                        clearTimeout(p.timer);
+                        s.pending.delete(String(content.id));
+                        if (content.error) p.reject(new Error(JSON.stringify(content.error)));
+                        else p.resolve(content.result);
+                    }
+                } catch (err) { }
+            }
+        }
+
+        // ── MCP ────────────────────────────────────
+        async function sendMCP(method, args) {
+            if (!s.ws || s.ws.readyState !== 1) throw new Error('Sin conexión al relay');
+            const id = Date.now().toString();
+            const req = { jsonrpc: "2.0", method: "tools/call", params: { name: method, arguments: args }, id };
+            const ev = { kind: 25910, pubkey: s.pubkey, created_at: Math.floor(Date.now() / 1000), tags: [["p", RELAY_PUBKEY]], content: JSON.stringify(req) };
+            let signed;
+            if (s.privkey) signed = window.NostrTools.finalizeEvent(ev, s.privkey);
+            else signed = await window.nostr.signEvent(ev);
+            return new Promise((resolve, reject) => {
+                s.pending.set(id, { resolve, reject, timer: setTimeout(() => { s.pending.delete(id); reject(new Error('Timeout')); }, 15000) });
+                s.ws.send(JSON.stringify(["EVENT", signed]));
+            });
+        }
+
+        // ── LOAD DATA ──────────────────────────────
+        async function loadListings() {
+            if (!s.httpUrl) return;
+            try {
+                const res = await fetch(`${s.httpUrl}/api/aarpia/instances?domain=${s.scope}`);
+                const all = await res.json();
+                s.listings = all.filter(i => i.entity_name === 'code_listing' && i.context_name === CONTEXT_NAME && !i.sealed);
+                renderListings(s.listings);
+                updateStats(all.filter(i => i.entity_name === 'code_listing' && i.context_name === CONTEXT_NAME));
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadMyListings() {
+            if (!s.httpUrl || !s.pubkey) return;
+            try {
+                const res = await fetch(`${s.httpUrl}/api/aarpia/instances?domain=${s.scope}`);
+                const all = await res.json();
+                const mine = all.filter(i => i.entity_name === 'code_listing' && i.context_name === CONTEXT_NAME && i.owner_did === `did:key:${s.pubkey}`);
+                renderMyListings(mine);
+            } catch (e) { }
+        }
+
+        function parseProduct(inst) {
+            if (!inst.actions_log) return {};
+            // Iterar todos los entries buscando el primero con JSON parseable que tenga 'name'
+            for (const entry of inst.actions_log) {
+                if (!entry.verb || entry.verb === 'CREAR') continue;
+                try {
+                    const parsed = JSON.parse(entry.verb);
+                    if (parsed && parsed.name) return parsed;
+                } catch (_) { }
+            }
+            return {};
+        }
+
+        function updateStats(all) {
+            document.getElementById('stat-total').textContent = all.length;
+            document.getElementById('stat-active').textContent = all.filter(i => !i.sealed && i.current_state === 'disponible').length;
+            document.getElementById('stat-sold').textContent = all.filter(i => i.sealed || i.current_state === 'vendido').length;
+        }
+
+        function renderListings(items) {
+            const g = document.getElementById('listings-grid');
+            if (!items.length) { g.innerHTML = '<div class="empty"><span class="empty-icon">⬡</span>No hay listados aún. ¡Sé el primero en vender!</div>'; return; }
+            g.innerHTML = '';
+            items.forEach(inst => {
+                const p = parseProduct(inst);
+                if (!p.name) return;
+                const card = document.createElement('div');
+                card.className = 'listing-card';
+                card.innerHTML = `
+      <div class="card-top">
+        <span class="lang-badge ${langClass(p.lang)}">${p.lang || '?'}</span>
+        <span style="font-size:.65rem;color:var(--muted);">${fmtDate(inst.created_at)}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${p.name || 'Sin nombre'}</div>
+        <div class="card-desc">${p.desc || ''}</div>
+        <div class="card-meta">
+          <div class="card-price">${Number(p.price || 0).toLocaleString()} <small>sats</small></div>
+          <div class="card-author">${short(p.lnaddr || inst.owner_did, 14)}</div>
+        </div>
+        <button class="btn-buy" onclick="openProduct('${inst.instance_hash}')">⚡ Ver &amp; Comprar</button>
+      </div>`;
+                g.appendChild(card);
+            });
+        }
+
+        function renderMyListings(items) {
+            const g = document.getElementById('my-grid');
+            if (!items.length) { g.innerHTML = '<div class="empty"><span class="empty-icon">⬡</span>No has publicado nada aún.</div>'; return; }
+            g.innerHTML = '';
+            items.forEach(inst => {
+                const p = parseProduct(inst);
+                if (!p.name) return;
+                const card = document.createElement('div');
+                card.className = 'listing-card';
+                card.innerHTML = `
+      <div class="card-top">
+        <span class="lang-badge ${langClass(p.lang)}">${p.lang || '?'}</span>
+        <span class="lang-badge ${inst.sealed ? 'lang-py' : 'lang-go'}">${inst.sealed ? 'VENDIDO' : 'ACTIVO'}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${p.name}</div>
+        <div class="card-meta">
+          <div class="card-price">${Number(p.price || 0).toLocaleString()} <small>sats</small></div>
+        </div>
+      </div>`;
+                g.appendChild(card);
+            });
+        }
+
+        // ── SELL ───────────────────────────────────
+        async function submitListing(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true; btn.innerHTML = '<span class="loader"></span> Publicando...';
+            const data = {
+                name: document.getElementById('f-name').value.trim(),
+                desc: document.getElementById('f-desc').value.trim(),
+                lang: document.getElementById('f-lang').value,
+                price: document.getElementById('f-price').value,
+                lnaddr: document.getElementById('f-lnaddr').value.trim(),
+                code: document.getElementById('f-code').value.trim()
+            };
+            try {
+                // initial_data DEBE ser string JSON — el relay lo espera como string, no objeto
+                const res = await sendMCP('aarpia_create_instance', {
+                    entity_name: 'code_listing',
+                    context_name: CONTEXT_NAME,
+                    start_state: 'disponible',
+                    target_state: 'vendido',
+                    domain: s.scope,
+                    initial_data: JSON.stringify(data)  // ← CRÍTICO: string, no objeto
+                });
+                const hash = typeof res === 'string' ? JSON.parse(res).instance_hash : res?.instance_hash;
+                toast('✓ Listado publicado', 'success');
+                e.target.reset();
+                goPage('page-market', document.querySelector('.nav-item'));
+                setTimeout(loadListings, 1500);
+            } catch (er) { toast('Error: ' + er.message, 'error'); }
+            btn.disabled = false; btn.innerHTML = '⟩ Publicar Listado';
+        }
+
+        // ── BUY ────────────────────────────────────
+        function openProduct(hash) {
+            const inst = s.listings.find(i => i.instance_hash === hash);
+            if (!inst) return;
+            s.currentProduct = inst;
+            const p = parseProduct(inst);
+            document.getElementById('m-name').textContent = p.name || 'Producto';
+            document.getElementById('m-lang-badge').textContent = p.lang || '?';
+            document.getElementById('m-lang-badge').className = 'lang-badge ' + langClass(p.lang);
+            document.getElementById('m-price').innerHTML = `${Number(p.price || 0).toLocaleString()} <small style="font-size:1rem">sats</small>`;
+            document.getElementById('m-desc').textContent = p.desc || '';
+            document.getElementById('m-lang').textContent = p.lang || '—';
+            document.getElementById('m-seller').textContent = short(p.lnaddr || inst.owner_did, 16);
+            document.getElementById('m-state').textContent = inst.current_state;
+            document.getElementById('m-date').textContent = fmtDate(inst.created_at);
+            document.getElementById('purchase-result').style.display = 'none';
+            document.getElementById('buy-btn').innerHTML = '⚡ Pagar y Descargar';
+            document.getElementById('buy-btn').disabled = false;
+            document.getElementById('product-modal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('product-modal').classList.remove('active'); }
+
+        async function buyProduct() {
+            if (!s.currentProduct) return;
+            const p = parseProduct(s.currentProduct);
+            const price = Number(p.price || 0);
+            const lnaddr = p.lnaddr;
+            const btn = document.getElementById('buy-btn');
+
+            // Si eres el propietario: acceso directo sin pago (Lightning no permite auto-pagos)
+            const isOwner = s.currentProduct.owner_did === `did:key:${s.pubkey}`;
+            if (isOwner) {
+                const resultEl = document.getElementById('purchase-result');
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `<div style="color:var(--accent2);margin-bottom:8px;">👤 ACCESO PROPIETARIO</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-all;">${p.code || '(Sin contenido adjunto)'}</div>`;
+                btn.innerHTML = '✓ Tu propio item';
+                return;
+            }
+
+            btn.disabled = true; btn.innerHTML = '<span class="loader"></span> Generando factura...';
+
+            // Intentar activar WebLN si no está activo (ej. login anónimo con Alby disponible)
+            if (!s.hasWebln) {
+                if (!window.webln) {
+                    toast('Necesitas la extensión Alby para pagar', 'error');
+                    btn.disabled = false; btn.innerHTML = '⚡ Pagar y Descargar';
+                    return;
+                }
+                try {
+                    await window.webln.enable();
+                    s.hasWebln = true;
+                    const b = await window.webln.getBalance();
+                    s.balance = b.balance;
+                    const chip = document.getElementById('balance-chip');
+                    chip.style.display = 'flex';
+                    document.getElementById('balance-val').textContent = s.balance.toLocaleString();
+                } catch (e) {
+                    toast('No se pudo conectar con Alby: ' + e.message, 'error');
+                    btn.disabled = false; btn.innerHTML = '⚡ Pagar y Descargar';
+                    return;
+                }
+            }
+
+            try {
+                // 1. Resolver LNURL del vendedor
+                const [user, domain] = lnaddr.split('@');
+                const lnurlRes = await fetch(`https://${domain}/.well-known/lnurlp/${user}`);
+                if (!lnurlRes.ok) throw new Error('LN Address no válida o sin servicio');
+                const lnurlData = await lnurlRes.json();
+                if (lnurlData.status === 'ERROR') throw new Error(lnurlData.reason || 'Error LNURL');
+
+                const amountMsat = price * 1000;
+                if (lnurlData.minSendable && amountMsat < lnurlData.minSendable) throw new Error(`Mínimo: ${Math.floor(lnurlData.minSendable / 1000)} sats`);
+                if (lnurlData.maxSendable > 0 && amountMsat > lnurlData.maxSendable) throw new Error(`Máximo: ${Math.floor(lnurlData.maxSendable / 1000)} sats`);
+
+                // 2. Obtener invoice
+                btn.innerHTML = '<span class="loader"></span> Esperando factura...';
+                let invoiceRes;
+                try { invoiceRes = await fetch(`${lnurlData.callback}?amount=${amountMsat}`); }
+                catch (e) { throw new Error('Fallo de red al generar factura'); }
+                // Verificar status HTTP antes de parsear — un error 500 devuelve HTML, no JSON
+                if (!invoiceRes.ok) throw new Error(`Error ${invoiceRes.status} del servidor del destinatario. Verifica la LN Address.`);
+                let invoiceData;
+                try { invoiceData = await invoiceRes.json(); }
+                catch (e) { throw new Error('El servidor del destinatario devolvió una respuesta inválida (no JSON)'); }
+                if (invoiceData.status === 'ERROR') throw new Error(invoiceData.reason || 'Error al generar factura');
+                if (invoiceData.error) throw new Error(invoiceData.message || 'Error al generar factura');
+                if (!invoiceData.pr) throw new Error('Factura vacía del proveedor');
+
+                // 3. Pagar REAL con WebLN
+                btn.innerHTML = '<span class="loader"></span> Esperando confirmar en Alby...';
+                const result = await window.webln.sendPayment(invoiceData.pr);
+
+                // 4. Entregar código y registrar en relay
+                toast('✓ Pago confirmado: ' + result.preimage.slice(0, 12) + '…', 'success');
+
+                // Actualizar balance real
+                const nb = await window.webln.getBalance();
+                s.balance = nb.balance;
+                document.getElementById('balance-val').textContent = nb.balance.toLocaleString();
+
+                // Registrar venta en relay
+                try {
+                    await sendMCP('aarpia_transition', {
+                        instance_hash: s.currentProduct.instance_hash,
+                        new_state: 'vendido',
+                        action_verb: `COMPRA_${s.pubkey.slice(0, 8)}`,
+                        action_type: 'STATE_CHANGE'
+                    });
+                } catch (_) { }
+
+                // Mostrar contenido
+                const resultEl = document.getElementById('purchase-result');
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `<div style="color:var(--accent);margin-bottom:8px;">✓ DESCARGA DESBLOQUEADA</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-all;">${p.code || '(Sin contenido adjunto)'}</div>`;
+                btn.innerHTML = '✓ Pagado';
+
+                setTimeout(loadListings, 2000);
+            } catch (err) {
+                toast('Pago fallido: ' + err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '⚡ Pagar y Descargar';
+                console.error(err);
+            }
+        }
+
+        // ── NAVIGATION ─────────────────────────────
+        function goPage(id, el) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (el) el.classList.add('active');
+            if (id === 'page-my') loadMyListings();
+            if (id === 'page-market') loadListings();
+        }
+
+        // ── BOOT ───────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            initScope();
+            const savedSk = localStorage.getItem('codex_sk');
+            const savedPk = localStorage.getItem('codex_pk');
+            if (savedPk) {
+                s.pubkey = savedPk;
+                if (savedSk) s.privkey = new Uint8Array(savedSk.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+                startApp();
+            }
+        });
+    </script>
+</body>
+
+</html>
