@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-    
 
 <head>
     <meta charset="UTF-8">
@@ -881,10 +880,18 @@
             if (!res.ok) throw new Error("No se encontró LNURL");
 
             const data = await res.json();
-            const invoiceRes = await fetch(`${data.callback}?amount=${amountSats * 1000}`); // Milisatoshis
+            let invoiceRes;
+            try {
+                invoiceRes = await fetch(`${data.callback}?amount=${amountSats * 1000}`); // Milisatoshis
+            } catch (e) {
+                throw new Error("Fallo de red al contactar al proveedor LNURL");
+            }
+
             const invoiceData = await invoiceRes.json();
 
-            if (!invoiceData.pr) throw new Error("Error generando factura destino");
+            if (invoiceData.status === "ERROR") throw new Error(invoiceData.reason || "Error del proveedor LNURL");
+            if (invoiceData.error) throw new Error(invoiceData.message || "Error del proveedor LNURL");
+            if (!invoiceData.pr) throw new Error("El proveedor no devolvió ninguna factura lnbc.");
             return invoiceData.pr;
         }
 
