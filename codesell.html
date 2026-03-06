@@ -774,12 +774,13 @@
             },
 
             ui: {
-                showMainApp: () => {
-                    document.getElementById('login-screen').classList.add('hidden');
-                    document.getElementById('app-container').classList.remove('hidden');
-const npub = window.NostrTools.nip19.npubEncode(app.state.pubkey);
-                    document.getElementById('ui-npub').innerText = npub.substring(0, 9) + '...' + npub.slice(-4);
-                },
+              showMainApp: () => {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+    // CORRECCIÓN: Pasamos el hex string directamente, npubEncode se encarga del resto
+    const npub = window.NostrTools.nip19.npubEncode(app.state.pubkey);
+    document.getElementById('ui-npub').innerText = npub.substring(0, 9) + '...' + npub.slice(-4);
+},
 
                 setConnectionStatus: (text, isOnline) => {
                     const ind = document.getElementById('ui-connection');
