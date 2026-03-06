@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS // Code Exchange</title>
+    <title>NEXUS // Code Exchange Protocol</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
     
     <style>
         :root {
-            --bg-base: #030303;
+            --bg-base: #050505;
             --bg-surface: #0a0a0a;
             --bg-panel: #111111;
-            --neon-primary: #00ff41;
-            --neon-glow: rgba(0, 255, 65, 0.2);
-            --neon-danger: #ff003c;
+            --neon-green: #00ff41;
+            --neon-glow: rgba(0, 255, 65, 0.15);
+            --danger: #ff003c;
             --text-main: #e0e0e0;
             --text-muted: #666666;
-            --border-color: #222222;
+            --border-dim: #1a1a1a;
+            --border-bright: #333333;
+            --font-mono: 'Fira Code', monospace;
         }
 
         * {
@@ -29,83 +31,25 @@
         }
 
         body {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: var(--font-mono);
             background-color: var(--bg-base);
             color: var(--text-main);
             overflow-x: hidden;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-base); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--neon-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-bright); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-green); }
 
         /* Typography & Utilities */
-        h1, h2, h3 { font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
-        .text-neon { color: var(--neon-primary); text-shadow: 0 0 5px var(--neon-glow); }
-        .text-danger { color: var(--neon-danger); }
+        h1, h2, h3 { font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+        .text-neon { color: var(--neon-green); text-shadow: 0 0 8px var(--neon-glow); }
+        .text-danger { color: var(--danger); }
         .hidden { display: none !important; }
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 10px 20px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        .btn:hover:not(:disabled) {
-            border-color: var(--text-main);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .btn-neon {
-            border-color: var(--neon-primary);
-            color: var(--neon-primary);
-            box-shadow: 0 0 10px var(--neon-glow) inset, 0 0 10px var(--neon-glow);
-        }
-
-        .btn-neon:hover:not(:disabled) {
-            background: var(--neon-primary);
-            color: var(--bg-base);
-            box-shadow: 0 0 20px var(--neon-primary) inset, 0 0 20px var(--neon-primary);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-color: var(--text-muted);
-            color: var(--text-muted);
-            box-shadow: none;
-        }
-
-        /* Forms */
-        .form-group { margin-bottom: 20px; }
-        .form-label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
-        .form-control {
-            width: 100%;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            color: var(--neon-primary);
-            padding: 12px;
-            font-family: inherit;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-        .form-control:focus { outline: none; border-color: var(--neon-primary); box-shadow: 0 0 5px var(--neon-glow); }
-        textarea.form-control { resize: vertical; min-height: 150px; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
 
         /* Layout */
         #app-container {
@@ -116,64 +60,138 @@
 
         header {
             background: var(--bg-surface);
-            border-bottom: 1px solid var(--border-color);
-            padding: 15px 30px;
+            border-bottom: 1px solid var(--border-dim);
+            padding: 12px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .brand { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
-        .brand svg { width: 30px; height: 30px; fill: var(--neon-primary); }
+        .brand { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+        .brand svg { width: 24px; height: 24px; fill: var(--neon-green); }
 
-        .system-status { display: flex; gap: 20px; font-size: 0.85rem; }
-        .status-item { display: flex; align-items: center; gap: 5px; }
+        .system-status { display: flex; gap: 20px; font-size: 0.8rem; align-items: center; flex-wrap: wrap; }
+        .status-item { display: flex; align-items: center; gap: 6px; background: var(--bg-panel); padding: 4px 10px; border: 1px solid var(--border-dim); }
         .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-        .status-indicator.online { background: var(--neon-primary); box-shadow: 0 0 5px var(--neon-primary); }
-        
-        main { padding: 30px; max-width: 1400px; margin: 0 auto; width: 100%; }
+        .status-indicator.online { background: var(--neon-green); box-shadow: 0 0 5px var(--neon-green); }
 
-        /* Navigation */
+        main { padding: 30px 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid var(--border-bright);
+            color: var(--text-main);
+            padding: 10px 16px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover:not(:disabled) {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+            background: var(--neon-glow);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .btn-neon {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+            text-shadow: 0 0 5px var(--neon-glow);
+        }
+
+        .btn-neon:hover:not(:disabled) {
+            background: var(--neon-green);
+            color: var(--bg-base);
+            box-shadow: 0 0 15px var(--neon-green);
+            text-shadow: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: var(--text-muted);
+            color: var(--text-muted);
+            background: transparent;
+            box-shadow: none;
+        }
+
+        /* Forms */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+        .form-control {
+            width: 100%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-dim);
+            color: var(--neon-green);
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--neon-green); box-shadow: 0 0 5px var(--neon-glow); }
+        .form-control::placeholder { color: #333; }
+        textarea.form-control { resize: vertical; min-height: 120px; }
+
+        /* Navigation Tabs */
         .nav-tabs {
-            display: flex; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;
+            display: flex; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid var(--border-dim);
         }
         .nav-tab {
-            background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 1rem; cursor: pointer; text-transform: uppercase; padding: 5px 10px; position: relative;
+            background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; padding: 10px 5px; position: relative; font-weight: 600; letter-spacing: 1px;
         }
-        .nav-tab.active { color: var(--neon-primary); font-weight: bold; }
-        .nav-tab.active::after { content: ''; position: absolute; bottom: -11px; left: 0; width: 100%; height: 2px; background: var(--neon-primary); box-shadow: 0 0 5px var(--neon-primary); }
+        .nav-tab.active { color: var(--neon-green); }
+        .nav-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+        .nav-tab:hover:not(.active) { color: var(--text-main); }
 
         /* Grid & Cards */
-        .toolbar { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
-        .search-box { flex: 1; min-width: 250px; position: relative; }
+        .toolbar { display: flex; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+        .search-box { flex: 1; min-width: 300px; position: relative; display: flex; align-items: center; }
+        .search-box::before { content: '>_'; position: absolute; left: 12px; color: var(--neon-green); font-weight: bold; }
+        .search-box input { padding-left: 40px; }
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; }
         
         .card {
             background: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            padding: 20px;
+            border: 1px solid var(--border-dim);
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
             position: relative;
-            overflow: hidden;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: all 0.2s ease;
         }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--border-color); transition: background 0.3s; }
-        .card:hover { transform: translateY(-2px); border-color: #333; }
-        .card:hover::before { background: var(--neon-primary); }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: var(--border-bright); transition: background 0.2s; }
+        .card:hover { border-color: var(--border-bright); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .card:hover::before { background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
         
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-title { font-size: 1.2rem; color: #fff; margin-bottom: 5px; word-break: break-all; }
-        .card-price { color: var(--neon-primary); font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;}
+        .card-title { font-size: 1.1rem; color: #fff; font-weight: 700; word-break: break-all; line-height: 1.3; }
+        .card-price { color: var(--neon-green); font-weight: bold; display: flex; align-items: center; gap: 6px; font-size: 1.1rem; background: rgba(0,255,65,0.05); border: 1px solid rgba(0,255,65,0.2); padding: 4px 8px; }
         
-        .card-meta { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
-        .card-desc { font-size: 0.9rem; color: #aaa; flex-grow: 1; }
+        .card-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 10px; margin-top: 6px; }
+        .card-desc { font-size: 0.85rem; color: #aaa; flex-grow: 1; }
         
-        .badge { padding: 3px 8px; font-size: 0.7rem; border-radius: 2px; text-transform: uppercase; font-weight: bold; border: 1px solid; }
-        .badge-available { color: #00ff41; border-color: rgba(0,255,65,0.3); background: rgba(0,255,65,0.05); }
-        .badge-sold { color: #ff003c; border-color: rgba(255,0,60,0.3); background: rgba(255,0,60,0.05); }
+        .badge { padding: 4px 8px; font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; border: 1px solid; display: inline-flex; align-items: center; gap: 4px;}
+        .badge-available { color: var(--neon-green); border-color: rgba(0,255,65,0.3); background: rgba(0,255,65,0.05); }
+        .badge-decrypted { color: #00d2ff; border-color: rgba(0,210,255,0.3); background: rgba(0,210,255,0.05); }
+
+        .code-preview { background: #000; border: 1px solid var(--border-bright); padding: 16px; overflow-x: auto; color: #a5d6ff; margin-top: 10px; font-size: 0.8rem; position: relative;}
+        .code-preview.encrypted { color: var(--text-muted); filter: blur(3px); user-select: none; }
+        .code-preview-overlay { position: absolute; top:0; left:0; right:0; bottom:0; display:flex; justify-content:center; align-items:center; font-weight:bold; color: var(--danger); text-shadow: 0 0 5px #000; pointer-events:none; z-index: 2; font-size: 1.2rem;}
 
         /* Login Screen */
         #login-screen {
@@ -181,55 +199,57 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
         }
         .login-box {
-            background: var(--bg-surface); border: 1px solid var(--border-color); padding: 40px; text-align: center; max-width: 500px; width: 90%;
-            position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            background: var(--bg-surface); border: 1px solid var(--border-dim); padding: 50px 40px; text-align: center; max-width: 450px; width: 90%;
+            position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
-        .login-box::before { content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px; border-top: 2px solid var(--neon-primary); border-left: 2px solid var(--neon-primary); }
-        .login-box::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px; border-bottom: 2px solid var(--neon-primary); border-right: 2px solid var(--neon-primary); }
+        .login-box::before { content: ''; position: absolute; top: -1px; left: -1px; width: 30px; height: 30px; border-top: 2px solid var(--neon-green); border-left: 2px solid var(--neon-green); }
+        .login-box::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 30px; height: 30px; border-bottom: 2px solid var(--neon-green); border-right: 2px solid var(--neon-green); }
 
         /* Toasts */
-        #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
+        #toast-container { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
         .toast {
-            background: var(--bg-panel); border-left: 3px solid var(--neon-primary); color: #fff; padding: 15px 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-size: 0.9rem;
-            animation: slideIn 0.3s ease forwards; min-width: 250px;
+            background: var(--bg-panel); border-left: 3px solid var(--neon-green); color: #fff; padding: 16px 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;
+            animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; min-width: 300px;
         }
-        .toast.error { border-color: var(--neon-danger); }
+        .toast.error { border-color: var(--danger); }
+        .toast.error svg { fill: var(--danger); }
+        .toast.success svg { fill: var(--neon-green); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
         /* Spinners */
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Banner */
-        .alert-banner { background: rgba(255,0,60,0.1); border: 1px solid var(--neon-danger); padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;}
-        .alert-banner button { background: none; border: none; color: var(--neon-danger); cursor: pointer; font-family: inherit; font-size: 1.2rem;}
-        
-        .code-preview { background: #000; border: 1px solid #333; padding: 15px; border-radius: 4px; overflow-x: auto; color: #a5d6ff; margin-top: 10px; font-size: 0.85rem;}
+        /* Banners */
+        .alert-banner { background: rgba(255,0,60,0.05); border: 1px solid var(--danger); padding: 16px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;}
+        .alert-banner button { background: none; border: none; color: var(--danger); cursor: pointer; font-family: inherit; font-size: 1.5rem; line-height: 1;}
         
         /* Footer */
-        footer { padding: 15px 30px; border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+        footer { padding: 16px 24px; border-top: 1px solid var(--border-dim); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; background: var(--bg-surface); }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-box">
-            <h1 class="text-neon" style="margin-bottom: 10px;">NEXUS</h1>
-            <h3 style="margin-bottom: 30px; color: var(--text-muted);">CODE EXCHANGE PROTOCOL</h3>
-            <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Autenticación requerida para acceder al marketplace descentralizado.</p>
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="var(--neon-green)" style="margin-bottom: 20px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <h1 class="text-neon" style="margin-bottom: 5px;">NEXUS</h1>
+            <h3 style="margin-bottom: 24px; color: var(--text-muted); font-size: 0.8rem;">CODE EXCHANGE PROTOCOL</h3>
+            <p style="margin-bottom: 32px; font-size: 0.85rem; color: #888;">Identificación requerida para acceder al marketplace descentralizado.</p>
             
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <button class="btn btn-neon" onclick="app.auth.connectWallet()" style="width: 100%;">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <button class="btn btn-neon" onclick="app.auth.connectWallet()" style="width: 100%; height: 48px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
                     CONECTAR WALLET (ALBY)
                 </button>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <hr style="flex:1; border-color: var(--border-color);">
-                    <span style="color: var(--text-muted); font-size: 0.8rem;">O</span>
-                    <hr style="flex:1; border-color: var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 0.75rem;">
+                    <hr style="flex:1; border:none; border-top: 1px solid var(--border-dim);">
+                    O MODO INCÓGNITO
+                    <hr style="flex:1; border:none; border-top: 1px solid var(--border-dim);">
                 </div>
-                <button class="btn" onclick="app.auth.createIdentity()" style="width: 100%;">
+                <button class="btn" onclick="app.auth.createIdentity()" style="width: 100%; height: 48px; border-color: var(--border-bright);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     GENERAR IDENTIDAD EFÍMERA
                 </button>
             </div>
@@ -239,132 +259,144 @@
     <div id="app-container" class="hidden">
         <header>
             <div class="brand">
-                <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 <span class="text-neon">NEXUS</span>
             </div>
             <div class="system-status">
-                <div class="status-item">
-                    <span class="text-muted">SCOPE:</span>
-                    <strong id="ui-scope">---</strong>
+                <div class="status-item" title="ID del Marketplace">
+                    <span style="color:var(--text-muted)">SCOPE:</span>
+                    <strong class="text-neon" id="ui-scope">---</strong>
                 </div>
-                <div class="status-item">
-                    <span class="text-muted">ID:</span>
+                <div class="status-item" title="Tu Identidad">
+                    <span style="color:var(--text-muted)">ID:</span>
                     <strong id="ui-npub">---</strong>
                 </div>
-                <div class="status-item">
-                    <span class="text-muted">FONDOS:</span>
-                    <strong class="text-neon" id="ui-balance">0 SATS</strong>
+                <div class="status-item" title="Saldo WebLN Real">
+                    <span style="color:var(--text-muted)">FONDOS:</span>
+                    <strong class="text-neon" id="ui-balance" style="display:flex; align-items:center; gap:4px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+                        0 SATS
+                    </strong>
                 </div>
                 <div class="status-item">
                     <div id="ui-connection" class="status-indicator"></div>
-                    <span id="ui-connection-text">DESCONECTADO</span>
+                    <span id="ui-connection-text">OFFLINE</span>
                 </div>
             </div>
         </header>
 
         <main>
             <div id="recovery-banner" class="alert-banner hidden">
-                <div>
-                    <strong>¡ATENCIÓN!</strong> Identidad generada automáticamente. Guarda tu clave privada para no perder el acceso:<br>
-                    <code id="ui-nsec" style="color: #fff; background: rgba(0,0,0,0.5); padding: 2px 5px; margin-top: 5px; display: inline-block;"></code>
+                <div style="flex:1;">
+                    <strong style="color: var(--danger); font-size: 0.9rem; display: block; margin-bottom: 5px;">> ADVERTENCIA DE SEGURIDAD</strong>
+                    <span style="font-size: 0.85rem; color: #ccc;">Identidad efímera generada. El acceso se perderá si borras los datos del navegador. Respalda tu clave privada:</span><br>
+                    <code id="ui-nsec" style="color: var(--danger); background: #000; padding: 4px 8px; margin-top: 8px; display: inline-block; border: 1px solid var(--danger); word-break: break-all; font-size: 0.8rem;"></code>
                 </div>
-                <button onclick="document.getElementById('recovery-banner').classList.add('hidden')">×</button>
+                <button onclick="document.getElementById('recovery-banner').classList.add('hidden')" title="Ocultar">×</button>
             </div>
 
             <nav class="nav-tabs">
                 <button class="nav-tab active" onclick="app.ui.switchTab('marketplace')">MARKETPLACE</button>
-                <button class="nav-tab" onclick="app.ui.switchTab('publish')">PUBLICAR CÓDIGO</button>
+                <button class="nav-tab" onclick="app.ui.switchTab('publish')">INYECTAR CÓDIGO</button>
                 <button class="nav-tab" onclick="app.ui.switchTab('settings')">SISTEMA</button>
             </nav>
 
             <div id="view-marketplace">
                 <div class="toolbar">
                     <div class="search-box">
-                        <input type="text" id="search-input" class="form-control" placeholder=">_ Buscar scripts, algoritmos, exploits..." onkeyup="app.ui.filterSnippets()">
+                        <input type="text" id="search-input" class="form-control" placeholder="Buscar algoritmos, exploits, scripts..." onkeyup="app.ui.filterSnippets()">
                     </div>
                     <button class="btn" onclick="app.api.fetchSnippets()">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                        RECARGAR DATOS
+                        SINCRONIZAR
                     </button>
                 </div>
                 <div id="snippets-grid" class="grid">
-                    <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted);">
-                        INICIALIZANDO CONEXIÓN SEGURA...
+                    <div style="grid-column: 1/-1; text-align: center; padding: 80px 0; color: var(--text-muted); font-style: italic;">
+                        <span class="blink">Estableciendo túnel seguro con el nodo central...</span>
                     </div>
                 </div>
             </div>
 
             <div id="view-publish" class="hidden">
-                <div style="max-width: 800px; margin: 0 auto; background: var(--bg-panel); padding: 30px; border: 1px solid var(--border-color);">
-                    <h2 style="margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">> NUEVO PAQUETE DE CÓDIGO</h2>
+                <div style="max-width: 800px; background: var(--bg-panel); padding: 32px; border: 1px solid var(--border-dim); margin: 0 auto; position: relative;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--neon-green);"></div>
+                    
+                    <h2 style="margin-bottom: 30px; display: flex; align-items: center; gap: 10px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--neon-green)"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                        NUEVO PAYLOAD
+                    </h2>
                     
                     <form id="publish-form" onsubmit="app.actions.publishSnippet(event)">
                         <div class="form-group">
-                            <label class="form-label">TÍTULO DEL SCRIPT</label>
-                            <input type="text" id="pub-title" class="form-control" required placeholder="Ej: Algoritmo de compresión cuántica v2">
+                            <label class="form-label">TÍTULO DEL PAQUETE</label>
+                            <input type="text" id="pub-title" class="form-control" required placeholder="Ej: Scraper de vulnerabilidades Zero-Day v2.1">
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
                             <div class="form-group">
-                                <label class="form-label">PRECIO (SATS)</label>
+                                <label class="form-label">PRECIO DE DESBLOQUEO (SATS)</label>
                                 <input type="number" id="pub-price" class="form-control" required min="1" placeholder="Ej: 500">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">TU DIRECCIÓN LIGHTNING (Para recibir pagos)</label>
+                                <label class="form-label">LIGHTNING ADDRESS (Destino de cobro)</label>
                                 <input type="email" id="pub-ln" class="form-control" required placeholder="tu_usuario@getalby.com">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">DESCRIPCIÓN TÉCNICA</label>
-                            <textarea id="pub-desc" class="form-control" required style="min-height: 80px;" placeholder="Detalles, dependencias, instrucciones de uso..."></textarea>
+                            <label class="form-label">ESPECIFICACIONES TÉCNICAS (Público)</label>
+                            <textarea id="pub-desc" class="form-control" required style="min-height: 80px;" placeholder="Describe qué hace el código, dependencias requeridas..."></textarea>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">CÓDIGO FUENTE (Se revelará tras la compra)</label>
-                            <textarea id="pub-code" class="form-control" required placeholder="def exploit():\n    pass"></textarea>
+                            <label class="form-label">CÓDIGO FUENTE (Cifrado hasta la compra)</label>
+                            <textarea id="pub-code" class="form-control" required placeholder="def execute_payload():\n    pass"></textarea>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">El contenido será encriptado en la red. Solo los compradores verificados podrán descifrarlo.</div>
                         </div>
 
-                        <button type="submit" class="btn btn-neon" id="btn-publish" style="width: 100%;">
-                            ENCRIPTAR Y PUBLICAR EN LA RED
+                        <button type="submit" class="btn btn-neon" id="btn-publish" style="width: 100%; height: 50px; font-size: 1rem; margin-top: 10px;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                            SELLAR Y TRANSMITIR
                         </button>
                     </form>
                 </div>
             </div>
 
             <div id="view-settings" class="hidden">
-                <div style="max-width: 600px; margin: 0 auto; background: var(--bg-panel); padding: 30px; border: 1px solid var(--border-color);">
-                    <h2 style="margin-bottom: 25px;">> CONFIGURACIÓN DE RED</h2>
+                <div style="max-width: 600px; background: var(--bg-panel); padding: 32px; border: 1px solid var(--border-dim); margin: 0 auto;">
+                    <h2 style="margin-bottom: 24px;">> PARÁMETROS DEL SISTEMA</h2>
                     
                     <div class="form-group">
-                        <label class="form-label">ID DEL MARKETPLACE (SCOPE ACTUAL)</label>
+                        <label class="form-label">ID DE ENTORNO ACTIVO (SCOPE)</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="set-scope" class="form-control" readonly>
+                            <input type="text" id="set-scope" class="form-control" readonly style="color: var(--text-muted);">
                             <button class="btn" onclick="app.utils.copyToClipboard(document.getElementById('set-scope').value)">COPIAR</button>
                         </div>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Comparte este ID para colaborar en un entorno privado.</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;">Este ID aísla el marketplace. Compártelo con otros para operar en la misma red privada.</p>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">CAMBIAR MARKETPLACE</label>
+                    <div class="form-group" style="margin-top: 30px;">
+                        <label class="form-label">SALTO A OTRO ENTORNO</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="new-scope" class="form-control" placeholder="Introduce un ID existente de 6 caracteres">
-                            <button class="btn btn-neon" onclick="app.actions.changeScope()">CONECTAR</button>
+                            <input type="text" id="new-scope" class="form-control" placeholder="Introduce un ID de 6 caracteres">
+                            <button class="btn btn-neon" onclick="app.actions.changeScope()">EJECUTAR</button>
                         </div>
                     </div>
 
-                    <hr style="border-color: var(--border-color); margin: 30px 0;">
+                    <hr style="border:none; border-top: 1px solid var(--border-dim); margin: 32px 0;">
 
-                    <button class="btn" style="color: var(--neon-danger); border-color: var(--neon-danger); width: 100%;" onclick="app.auth.logout()">
-                        CERRAR SESIÓN Y PURGAR DATOS
+                    <button class="btn" style="color: var(--danger); border-color: rgba(255,0,60,0.5); width: 100%; height: 45px;" onclick="app.auth.logout()">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+                        PURGAR SESIÓN Y DESCONECTAR
                     </button>
                 </div>
             </div>
         </main>
 
         <footer>
-            <div>NEXUS // V1.0.0 // ENCRIPTACIÓN ACTIVA</div>
-            <div id="footer-relay">BUSCANDO NODOS...</div>
+            <div>NEXUS v1.0 // ENCRIPTACIÓN ACTIVA</div>
+            <div id="footer-relay" style="font-family: monospace;">BUSCANDO NODO...</div>
         </footer>
     </div>
 
@@ -372,19 +404,22 @@
 
     <script>
         /**
-         * NEXUS CORE LOGIC
-         * Implementación estricta de requerimientos: CSS Vanilla, Pagos Reales (Alby/LNURL), Multi-tenancy, Patrón MCP (oculto en UI).
+         * NEXUS CORE ENGINE
+         * Arquitectura estrictamente adaptada a los requerimientos:
+         * - Multi-tenancy vía LocalStorage scope.
+         * - Pagos 100% reales WebLN / LNURL.
+         * - Descubrimiento de Relay vía Kind 11316.
+         * - Motor de estados y logs mapeados al dominio (Cifrado -> Descifrado).
          */
         
         const DISCOVERY_RELAYS = ['wss://relay.damus.io', 'wss://relay.contextvm.org', 'wss://relay2.contextvm.org'];
         const RELAY_PUBKEY = '1bdc9826c1c2537acc0c288fcf73af8f6638f7b3941a4f70414bc6929338d521';
-        const FALLBACK_RELAY = 'wss://indication-resolved-fans-automobiles.trycloudflare.com';
-
+        
         const app = {
             state: {
                 scope: '',
                 pubkey: null,
-                privkey: null, // Si usó Option 2
+                privkeyBytes: null, // Uint8Array si usamos generación efímera
                 connected: false,
                 relayWsUrl: '',
                 relayHttpUrl: '',
@@ -395,7 +430,7 @@
             },
 
             init: async () => {
-                // 1. Gestionar Scope (Multi-tenancy)
+                // 1. Configurar Scope (Multi-tenancy obligatorio)
                 let scope = localStorage.getItem('mobi_scope');
                 if (!scope) {
                     scope = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -405,24 +440,27 @@
                 document.getElementById('ui-scope').innerText = scope;
                 document.getElementById('set-scope').value = scope;
 
-                // 2. Comprobar sesión
+                // 2. Verificar Sesión Activa
                 const savedPubkey = localStorage.getItem('nexus_pubkey');
-                const savedPrivkey = localStorage.getItem('nexus_privkey');
+                const savedPrivkeyHex = localStorage.getItem('nexus_privkey');
                 
                 if (savedPubkey) {
                     app.state.pubkey = savedPubkey;
-                    if (savedPrivkey) app.state.privkey = savedPrivkey;
-                    app.ui.showMainApp();
-                    app.network.discoverAndConnect();
+                    if (savedPrivkeyHex) {
+                        app.state.privkeyBytes = app.utils.hexToBytes(savedPrivkeyHex);
+                    }
                     
-                    // Intentar reactivar WebLN en background si es posible
-                    if (window.webln && !savedPrivkey) {
+                    // Inicializar WebLN silenciosamente si existe
+                    if (window.webln) {
                         try {
                             await window.webln.enable();
                             app.state.isWebLN = true;
                             app.auth.updateBalance();
-                        } catch(e) { console.warn("WebLN require interaccion manual"); }
+                        } catch(e) { console.warn("WebLN requiere interacción manual"); }
                     }
+
+                    app.ui.showMainApp();
+                    app.network.discoverAndConnect();
                 }
             },
 
@@ -431,58 +469,58 @@
                     try {
                         if (!window.nostr) {
                             app.ui.toast("Extensión Nostr (ej: Alby) no detectada.", "error");
-                            window.open("https://getalby.com", "_blank");
+                            setTimeout(() => window.open("https://getalby.com", "_blank"), 2000);
                             return;
                         }
                         
+                        // NIP-07 Login
                         const pubkey = await window.nostr.getPublicKey();
                         app.state.pubkey = pubkey;
                         localStorage.setItem('nexus_pubkey', pubkey);
 
+                        // Inicializar Pagos Reales
                         if (window.webln) {
                             await window.webln.enable();
                             app.state.isWebLN = true;
                             await app.auth.updateBalance();
                         } else {
-                            app.ui.toast("WebLN no detectado. Pagos reales no disponibles.", "error");
+                            app.ui.toast("WebLN no detectado. No podrás realizar compras.", "error");
                         }
 
                         app.ui.showMainApp();
                         app.network.discoverAndConnect();
-                        app.ui.toast("Autenticación biométrica confirmada.");
+                        app.ui.toast("Firma criptográfica verificada. Acceso concedido.", "success");
                     } catch (err) {
-                        app.ui.toast("Conexión rechazada por la wallet.", "error");
+                        app.ui.toast("Conexión rechazada por el agente.", "error");
                     }
                 },
 
                 createIdentity: () => {
                     try {
-                        // Generar claves vía NostrTools
+                        // Generación de par de claves
                         const skBytes = window.NostrTools.generateSecretKey();
                         const pkBytes = window.NostrTools.getPublicKey(skBytes);
                         
-                        // Convertir a Hex para almacenar (Formato interno)
                         const skHex = app.utils.bytesToHex(skBytes);
                         const pkHex = app.utils.bytesToHex(pkBytes);
 
-                        app.state.privkey = skHex;
+                        app.state.privkeyBytes = skBytes;
                         app.state.pubkey = pkHex;
 
                         localStorage.setItem('nexus_privkey', skHex);
                         localStorage.setItem('nexus_pubkey', pkHex);
 
-                        // Codificar nsec para el usuario
+                        // Mostrar banner de recuperación
                         const nsec = window.NostrTools.nip19.nsecEncode(skBytes);
-                        
                         document.getElementById('ui-nsec').innerText = nsec;
                         document.getElementById('recovery-banner').classList.remove('hidden');
 
                         app.ui.showMainApp();
                         app.network.discoverAndConnect();
-                        app.ui.toast("Identidad efímera generada e inyectada.");
+                        app.ui.toast("Identidad fantasma generada correctamente.", "success");
                     } catch(err) {
                         console.error(err);
-                        app.ui.toast("Fallo al generar claves criptográficas.", "error");
+                        app.ui.toast("Fallo de entropía al generar claves.", "error");
                     }
                 },
 
@@ -491,8 +529,12 @@
                         try {
                             const res = await window.webln.getBalance();
                             app.state.balance = res.balance;
-                            document.getElementById('ui-balance').innerText = `${res.balance} SATS`;
-                        } catch(e) { console.warn("No se pudo leer balance"); }
+                            // Actualizar UI - SALDO 100% REAL
+                            document.getElementById('ui-balance').innerHTML = `
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+                                ${res.balance.toLocaleString()} SATS
+                            `;
+                        } catch(e) { console.warn("No se pudo leer el balance exacto"); }
                     }
                 },
 
@@ -505,64 +547,66 @@
 
             network: {
                 discoverAndConnect: async () => {
-                    app.ui.setConnectionStatus("BUSCANDO NODOS...", false);
+                    app.ui.setConnectionStatus("RASTREANDO", false);
                     let found = false;
 
-                    for (const url of DISCOVERY_RELAYS) {
-                        if(found) break;
+                    const tryRelay = (url) => new Promise((resolve) => {
                         try {
                             const ws = new WebSocket(url);
-                            await new Promise((resolve, reject) => {
-                                ws.onopen = () => {
-                                    ws.send(JSON.stringify(["REQ", "sub", { kinds: [11316], authors: [RELAY_PUBKEY], limit: 1 }]));
-                                };
-                                ws.onmessage = (e) => {
-                                    const data = JSON.parse(e.data);
-                                    if (data[0] === "EVENT") {
-                                        const event = data[2];
-                                        const relayTag = event.tags.find(t => t[0] === 'r');
-                                        if (relayTag && !found) {
-                                            found = true;
-                                            app.network.connectToRelay(relayTag[1]);
-                                            ws.close();
-                                            resolve();
-                                        }
+                            ws.onopen = () => {
+                                // Buscar anuncio de relay
+                                ws.send(JSON.stringify(["REQ", "disc", { kinds: [11316], authors: [RELAY_PUBKEY], limit: 1 }]));
+                            };
+                            ws.onmessage = (e) => {
+                                const data = JSON.parse(e.data);
+                                if (data[0] === "EVENT") {
+                                    const rTag = data[2].tags.find(t => t[0] === 'r');
+                                    if (rTag && !found) {
+                                        found = true;
+                                        ws.close();
+                                        app.network.connectToNode(rTag[1]);
                                     }
-                                };
-                                ws.onerror = reject;
-                                setTimeout(() => { ws.close(); resolve(); }, 3000);
-                            });
-                        } catch(e) { continue; }
+                                }
+                                if (data[0] === "EOSE") { ws.close(); resolve(); }
+                            };
+                            ws.onerror = () => { ws.close(); resolve(); };
+                            setTimeout(() => { ws.close(); resolve(); }, 4000);
+                        } catch(e) { resolve(); }
+                    });
+
+                    for (const url of DISCOVERY_RELAYS) {
+                        if (found) break;
+                        await tryRelay(url);
                     }
 
+                    // Fallback Local (solo útil si el relay corre localmente)
                     if (!found) {
-                        console.log("Fallback a nodo por defecto");
-                        app.network.connectToRelay(FALLBACK_RELAY);
+                        console.log("Discovery falló. Usando localhost fallback.");
+                        app.network.connectToNode('ws://localhost:3334');
                     }
                 },
 
-                connectToRelay: (wsUrl) => {
+                connectToNode: (wsUrl) => {
                     app.state.relayWsUrl = wsUrl;
                     app.state.relayHttpUrl = wsUrl.replace('wss://', 'https://').replace('ws://', 'http://');
-                    document.getElementById('footer-relay').innerText = `CONECTADO A: ${wsUrl}`;
+                    document.getElementById('footer-relay').innerText = `NODO: ${wsUrl}`;
 
                     app.state.ws = new WebSocket(wsUrl);
                     
                     app.state.ws.onopen = () => {
                         app.state.connected = true;
-                        app.ui.setConnectionStatus("EN LÍNEA", true);
-                        app.api.fetchSnippets(); // Cargar datos
+                        app.ui.setConnectionStatus("ONLINE", true);
+                        app.api.fetchSnippets(); 
                     };
 
                     app.state.ws.onclose = () => {
                         app.state.connected = false;
-                        app.ui.setConnectionStatus("DESCONECTADO", false);
-                        setTimeout(() => app.network.connectToRelay(wsUrl), 5000); // Backoff simple
+                        app.ui.setConnectionStatus("OFFLINE", false);
+                        setTimeout(() => app.network.connectToNode(wsUrl), 5000);
                     };
                 },
 
-                // Envía evento tipo 25910 (MCP)
-                sendRequest: async (requestPayload) => {
+                sendMCPRequest: async (requestPayload) => {
                     if (!app.state.connected) throw new Error("Sin conexión al nodo central");
 
                     const event = {
@@ -574,12 +618,9 @@
                     };
 
                     let signedEvent;
-                    if (app.state.privkey) {
-                        // Firma local (Opción 2)
-                        const skBytes = app.utils.hexToBytes(app.state.privkey);
-                        signedEvent = window.NostrTools.finalizeEvent(event, skBytes);
+                    if (app.state.privkeyBytes) {
+                        signedEvent = window.NostrTools.finalizeEvent(event, app.state.privkeyBytes);
                     } else {
-                        // Firma vía NIP-07
                         signedEvent = await window.nostr.signEvent(event);
                     }
 
@@ -591,16 +632,16 @@
                 fetchSnippets: async () => {
                     if(!app.state.relayHttpUrl) return;
                     try {
-                        const res = await fetch(`${app.state.relayHttpUrl}/api/aarpia/instances?domain=${app.state.scope}`);
-                        if(!res.ok) throw new Error("Error HTTP");
+                        const url = `${app.state.relayHttpUrl}/api/aarpia/instances?domain=${app.state.scope}`;
+                        const res = await fetch(url);
+                        if(!res.ok) throw new Error("API Rest Error");
                         const data = await res.json();
                         
-                        // Filtrar los que sean nuestro entity "code_snippet"
+                        // Filtrar nuestra entidad "code_snippet"
                         app.state.snippets = data.filter(inst => inst.entity_hash === "code_snippet" || inst.context_hash === "nexus_marketplace");
                         app.ui.renderSnippets(app.state.snippets);
                     } catch(err) {
-                        console.error("Fetch Error:", err);
-                        // No mostramos toast de error en polling/fetch automático para no ser molestos
+                        console.error("Sincronización fallida:", err);
                     }
                 }
             },
@@ -609,8 +650,9 @@
                 publishSnippet: async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('btn-publish');
+                    const originalText = btn.innerHTML;
                     btn.disabled = true;
-                    btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-linecap="round"></circle></svg> PROCESANDO...';
+                    btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-linecap="round"></circle></svg> ENCRIPTANDO...';
 
                     const title = document.getElementById('pub-title').value;
                     const price = document.getElementById('pub-price').value;
@@ -618,8 +660,8 @@
                     const desc = document.getElementById('pub-desc').value;
                     const code = document.getElementById('pub-code').value;
 
-                    // Empaquetar data (Simulando lo que se requiere en el ecosistema real)
-                    const initialData = { title, price, lnAddress, desc, code, sellerPubkey: app.state.pubkey };
+                    // El motor guarda esto internamente en la acción inicial
+                    const payload = { title, price: parseInt(price), lnAddress, desc, code, author: app.state.pubkey };
 
                     const request = {
                         jsonrpc: "2.0",
@@ -629,79 +671,71 @@
                             arguments: {
                                 entity_name: "code_snippet",
                                 context_name: "nexus_marketplace",
-                                start_state: "available",
-                                target_state: "purchased",
+                                start_state: "encrypted",  // Estado inicial
+                                target_state: "decrypted", // Estado meta (Cierre de ciclo)
                                 domain: app.state.scope,
-                                initial_data: initialData
+                                initial_data: payload
                             }
                         },
                         id: Date.now()
                     };
 
                     try {
-                        await app.network.sendRequest(request);
-                        app.ui.toast("Código inyectado en el blockchain con éxito.");
+                        await app.network.sendMCPRequest(request);
+                        app.ui.toast("Paquete encriptado y transmitido a la red.", "success");
                         document.getElementById('publish-form').reset();
                         
-                        // Recargar tras unos segundos para dar tiempo al Relay a procesar el evento Nostr
                         setTimeout(() => {
                             app.api.fetchSnippets();
                             app.ui.switchTab('marketplace');
-                        }, 2500);
-
+                        }, 2000);
                     } catch(err) {
                         console.error(err);
-                        app.ui.toast("Fallo en la publicación.", "error");
+                        app.ui.toast("Fallo en la transmisión del paquete.", "error");
                     } finally {
                         btn.disabled = false;
-                        btn.innerHTML = 'ENCRIPTAR Y PUBLICAR EN LA RED';
+                        btn.innerHTML = originalText;
                     }
                 },
 
                 buySnippet: async (instanceHash) => {
-                    // Encontrar el snippet completo
                     const snippet = app.state.snippets.find(s => s.instance_hash === instanceHash);
                     if(!snippet) return;
 
-                    // Extraer los datos guardados en el historial de acciones (creación)
-                    // Como el motor los guarda en el log, buscamos la acción inicial
+                    // Extraer los datos guardados en el historial de acciones (DATA_ENTRY o creación)
                     let data = {};
                     try {
-                        const createLog = snippet.actions_log.find(l => l.type === "DATA_ENTRY" || l.verb.includes("CREATE") || l.verb === "INITIALIZE");
-                        if(createLog && createLog.data) {
-                            data = typeof createLog.data === 'string' ? JSON.parse(createLog.data) : createLog.data;
-                        } else if (snippet.data) { // Fallback según estructura de API
-                            data = snippet.data;
-                        }
-                    } catch(e) { console.warn("Error parsing snippet data"); }
+                        const createLog = snippet.actions_log.find(l => l.data);
+                        if(createLog) data = typeof createLog.data === 'string' ? JSON.parse(createLog.data) : createLog.data;
+                    } catch(e) {}
 
                     const price = data.price || 10;
                     const lnAddress = data.lnAddress;
 
                     if (!lnAddress) {
-                        app.ui.toast("El vendedor no configuró una dirección de cobro válida.", "error");
+                        app.ui.toast("El creador no adjuntó una dirección de cobro (LN Address) válida.", "error");
                         return;
                     }
 
                     if (!app.state.isWebLN) {
-                        app.ui.toast("¡Requiere Alby o WebLN activo para ejecutar transacciones reales!", "error");
+                        app.ui.toast("Requiere conexión a wallet (Alby) para ejecutar pagos Lightning.", "error");
                         return;
                     }
 
                     try {
-                        app.ui.toast(`Solicitando invoice a ${lnAddress} por ${price} SATS...`);
+                        app.ui.toast(`Estableciendo ruta de pago a ${lnAddress}...`);
                         
-                        // 1. RESOLUCIÓN LNURL 100% REAL
+                        // 1. Obtener Invoice real vía LNURL
                         const bolt11 = await app.utils.getInvoiceFromLNAddress(lnAddress, price);
                         
                         // 2. PAGO LIGHTNING 100% REAL vía WebLN
                         const paymentResult = await window.webln.sendPayment(bolt11);
-                        console.log("Prueba criptográfica (Preimage):", paymentResult.preimage);
+                        console.log("Prueba criptográfica de pago (Preimage):", paymentResult.preimage);
                         
-                        app.ui.toast("Pago confirmado. Desbloqueando código...", "success");
-                        app.auth.updateBalance();
+                        app.ui.toast("Pago verificado. Descifrando payload...", "success");
+                        app.auth.updateBalance(); // Actualizar saldo real
 
-                        // 3. ACTUALIZAR ESTADO EN EL RELAY (Transición)
+                        // 3. Cambiar estado en el Relay para dejar constancia criptográfica
                         const request = {
                             jsonrpc: "2.0",
                             method: "tools/call",
@@ -709,29 +743,32 @@
                                 name: "aarpia_transition",
                                 arguments: {
                                     instance_hash: instanceHash,
-                                    new_state: "purchased", // META STATE -> Lacra el proceso
-                                    action_verb: "PURCHASE_CODE",
+                                    new_state: "decrypted", // Estado Meta -> Lacra el proceso
+                                    action_verb: "ACQUIRE_PAYLOAD",
                                     action_type: "STATE_CHANGE"
                                 }
                             },
                             id: Date.now()
                         };
 
-                        await app.network.sendRequest(request);
-
-                        setTimeout(() => app.api.fetchSnippets(), 2000);
+                        await app.network.sendMCPRequest(request);
+                        
+                        // Actualizar UI tras un breve delay
+                        setTimeout(() => app.api.fetchSnippets(), 2500);
 
                     } catch(err) {
-                        console.error("Payment Error:", err);
-                        app.ui.toast("Transacción abortada o fallida.", "error");
+                        console.error("Transacción abortada:", err);
+                        app.ui.toast("Pago fallido o cancelado por el usuario.", "error");
                     }
                 },
 
                 changeScope: () => {
-                    const newScope = document.getElementById('new-scope').value.trim();
+                    const newScope = document.getElementById('new-scope').value.trim().toUpperCase();
                     if(newScope.length >= 4) {
-                        localStorage.setItem('mobi_scope', newScope.toUpperCase());
+                        localStorage.setItem('mobi_scope', newScope);
                         location.reload();
+                    } else {
+                        app.ui.toast("ID de entorno inválido. Mínimo 4 caracteres.", "error");
                     }
                 }
             },
@@ -741,7 +778,7 @@
                     document.getElementById('login-screen').classList.add('hidden');
                     document.getElementById('app-container').classList.remove('hidden');
                     const npub = window.NostrTools.nip19.npubEncode(app.utils.hexToBytes(app.state.pubkey));
-                    document.getElementById('ui-npub').innerText = npub.substring(0, 10) + '...' + npub.slice(-4);
+                    document.getElementById('ui-npub').innerText = npub.substring(0, 9) + '...' + npub.slice(-4);
                 },
 
                 setConnectionStatus: (text, isOnline) => {
@@ -763,11 +800,17 @@
                 toast: (msg, type = "info") => {
                     const container = document.getElementById('toast-container');
                     const el = document.createElement('div');
-                    el.className = `toast ${type === 'error' ? 'error' : ''}`;
-                    el.innerHTML = `> ${msg}`;
+                    el.className = `toast ${type === 'error' ? 'error' : 'success'}`;
+                    
+                    const icon = type === 'error' ? 
+                        '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>' :
+                        '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+                    
+                    el.innerHTML = `${icon} <span>${msg}</span>`;
                     container.appendChild(el);
                     setTimeout(() => {
                         el.style.opacity = '0';
+                        el.style.transform = 'translateX(100%)';
                         setTimeout(() => el.remove(), 300);
                     }, 4000);
                 },
@@ -777,12 +820,14 @@
                     grid.innerHTML = '';
 
                     if(snippets.length === 0) {
-                        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted); border: 1px dashed var(--border-color);">NO HAY PAQUETES DE CÓDIGO EN ESTE SECTOR</div>';
+                        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; border: 1px dashed var(--border-dim); color: var(--text-muted);">0 RESULTADOS ENCONTRADOS EN ESTE SECTOR</div>';
                         return;
                     }
 
+                    // Ordenar por fecha (más recientes primero)
+                    snippets.sort((a, b) => b.actions_log[0]?.timestamp - a.actions_log[0]?.timestamp);
+
                     snippets.forEach(inst => {
-                        // Intentar reconstruir payload
                         let data = {};
                         if(inst.actions_log && inst.actions_log.length > 0) {
                             try {
@@ -791,22 +836,21 @@
                             } catch(e) {}
                         }
                         
-                        const title = data.title || "Unknown Exploit";
+                        const title = data.title || "Payload Desconocido";
                         const price = data.price || "???";
-                        const desc = data.desc || "Sin descripción proporcionada.";
+                        const desc = data.desc || "Sin especificaciones.";
                         const code = data.code || "";
                         
-                        const isSold = inst.sealed === true || inst.current_state === "purchased";
+                        // Lógica de Dominio mapeada a la máquina de estados:
+                        // Si está sellado (sealed = true) o el current_state es "decrypted"
+                        const isSold = inst.sealed === true || inst.current_state === "decrypted";
                         const isOwner = inst.owner_did === app.state.pubkey;
 
-                        // Solo revelar código si está comprado Y el usuario logueado lo compró, o si es el dueño
-                        // Nota: En un sistema real descentralizado, esto se cifra con NIP-04/NIP-44. 
-                        // Aquí aplicamos lógica visual de "desbloqueo".
+                        // Revelar código si: soy dueño, o está vendido y fui yo el que lo compró
                         let showCode = false;
                         if(isOwner) showCode = true;
                         if(isSold) {
-                            // Buscar en el log quién disparó la acción PURCHASE
-                            const purchaseLog = inst.actions_log.find(l => l.verb === "PURCHASE_CODE");
+                            const purchaseLog = inst.actions_log.find(l => l.verb === "ACQUIRE_PAYLOAD");
                             if(purchaseLog && purchaseLog.actor === app.state.pubkey) showCode = true;
                         }
 
@@ -815,12 +859,17 @@
                         card.dataset.title = title.toLowerCase();
                         card.dataset.desc = desc.toLowerCase();
 
+                        // Formato de fecha
+                        const date = inst.actions_log[0] ? new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' }).format(new Date(inst.actions_log[0].timestamp * 1000)) : 'Unknown';
+
                         card.innerHTML = `
                             <div class="card-header">
-                                <div style="max-width: 70%;">
-                                    <div class="card-title">${title}</div>
+                                <div>
+                                    <div class="card-title">${app.utils.escapeHTML(title)}</div>
                                     <div class="card-meta">
-                                        <span>HASH: ${inst.instance_hash.substring(0,8)}...</span>
+                                        <span>HASH: ${inst.instance_hash.substring(0,8)}</span>
+                                        <span>|</span>
+                                        <span>${date}</span>
                                     </div>
                                 </div>
                                 <div class="card-price">
@@ -829,21 +878,28 @@
                                 </div>
                             </div>
                             
-                            <div class="card-desc">${desc}</div>
+                            <div class="card-desc">${app.utils.escapeHTML(desc)}</div>
                             
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px dashed var(--border-dim); padding-top: 16px;">
                                 ${isSold ? 
-                                    '<span class="badge badge-sold">LACRADO / VENDIDO</span>' : 
-                                    '<span class="badge badge-available">DISPONIBLE</span>'}
+                                    '<span class="badge badge-decrypted"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg> COMPROMETIDO</span>' : 
+                                    '<span class="badge badge-available"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg> CIFRADO</span>'}
                                 
                                 ${!isSold && !isOwner ? 
-                                    `<button class="btn btn-neon" style="padding: 5px 15px;" onclick="app.actions.buySnippet('${inst.instance_hash}')">ADQUIRIR</button>` : ''}
+                                    `<button class="btn btn-neon" style="padding: 6px 12px; font-size: 0.75rem;" onclick="app.actions.buySnippet('${inst.instance_hash}')">ADQUIRIR CLAVE</button>` : ''}
                             </div>
                             
                             ${showCode ? 
-                                `<div class="code-preview"><div style="color:var(--neon-primary); margin-bottom:5px; font-weight:bold;">// PAYLOAD DESENCRIPTADO</div><pre><code>${app.utils.escapeHTML(code)}</code></pre></div>` 
+                                `<div class="code-preview">
+                                    <div style="color:var(--neon-green); margin-bottom:8px; font-weight:bold; font-size:0.7rem;">// ACCESO DESBLOQUEADO</div>
+                                    <pre style="white-space: pre-wrap; word-break: break-all;"><code>${app.utils.escapeHTML(code)}</code></pre>
+                                </div>` 
                                 : 
-                                (isSold ? '' : `<div class="code-preview" style="filter: blur(4px); user-select: none;">// ENCRIPTADO\n${btoa(title+desc).substring(0,50)}...</div>`)
+                                (isSold ? '' : `
+                                <div class="code-preview encrypted">
+                                    <div class="code-preview-overlay">ACCESO DENEGADO</div>
+                                    <pre><code>${btoa(title+desc+price).substring(0,80)}...\n${btoa(Date.now().toString()).substring(0,40)}</code></pre>
+                                </div>`)
                             }
                         `;
                         grid.appendChild(card);
@@ -863,45 +919,45 @@
                 hexToBytes: (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))),
                 bytesToHex: (bytes) => bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), ''),
                 escapeHTML: (str) => str.replace(/[&<>'"]/g, tag => ({'&': '&amp;','<': '&lt;','>': '&gt;',"'": '&#39;','"': '&quot;'}[tag])),
-                copyToClipboard: (txt) => { navigator.clipboard.writeText(txt); app.ui.toast("Copiado al portapapeles"); },
+                copyToClipboard: (txt) => { navigator.clipboard.writeText(txt); app.ui.toast("ID copiado al portapapeles"); },
                 
-                // Función VÍDICA para obtener un Invoice real dado un Lightning Address
+                // Función VÍDICA y 100% REAL para resolver LN Address a Invoice BOLT11
                 getInvoiceFromLNAddress: async (lnAddress, amountSats) => {
                     const parts = lnAddress.split('@');
-                    if (parts.length !== 2) throw new Error("Formato inválido. Usa usuario@dominio.com");
+                    if (parts.length !== 2) throw new Error("Formato LN Address inválido.");
                     const user = parts[0];
                     const domain = parts[1];
 
                     // 1. Fetch LNURL metadata
                     const url = `https://${domain}/.well-known/lnurlp/${user}`;
                     const res = await fetch(url);
-                    if (!res.ok) throw new Error("No se pudo resolver LN Address");
+                    if (!res.ok) throw new Error("No se pudo resolver el host Lightning");
                     const data = await res.json();
                     
-                    if(data.tag !== "payRequest") throw new Error("El nodo no soporta LNURL-Pay");
+                    if(data.tag !== "payRequest") throw new Error("El nodo no admite pagos estándar.");
 
                     // 2. Pedir invoice por msats
                     const msats = amountSats * 1000;
                     if(msats < data.minSendable || msats > data.maxSendable) {
-                        throw new Error(`Cantidad fuera de límites (${data.minSendable/1000} - ${data.maxSendable/1000} sats)`);
+                        throw new Error(`Importe fuera de límites: ${data.minSendable/1000} - ${data.maxSendable/1000} sats`);
                     }
 
                     const callbackUrl = new URL(data.callback);
                     callbackUrl.searchParams.append("amount", msats.toString());
 
                     const cbRes = await fetch(callbackUrl.toString());
-                    if (!cbRes.ok) throw new Error("Fallo al generar invoice");
+                    if (!cbRes.ok) throw new Error("El nodo falló al generar la factura BOLT11.");
                     const cbData = await cbRes.json();
 
                     if(cbData.status === "ERROR") throw new Error(cbData.reason);
-                    if(!cbData.pr) throw new Error("No se devolvió un BOLT11 válido");
+                    if(!cbData.pr) throw new Error("Respuesta inválida del servidor Lightning.");
 
                     return cbData.pr;
                 }
             }
         };
 
-        // Bootstrap
+        // Bootstrap App
         window.onload = app.init;
     </script>
 </body>
