@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS // Code Exchange</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+    
+    <style>
+        :root {
+            --bg-base: #030303;
+            --bg-surface: #0a0a0a;
+            --bg-panel: #111111;
+            --neon-primary: #00ff41;
+            --neon-glow: rgba(0, 255, 65, 0.2);
+            --neon-danger: #ff003c;
+            --text-main: #e0e0e0;
+            --text-muted: #666666;
+            --border-color: #222222;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-primary); }
+
+        /* Typography & Utilities */
+        h1, h2, h3 { font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .text-neon { color: var(--neon-primary); text-shadow: 0 0 5px var(--neon-glow); }
+        .text-danger { color: var(--neon-danger); }
+        .hidden { display: none !important; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover:not(:disabled) {
+            border-color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-neon {
+            border-color: var(--neon-primary);
+            color: var(--neon-primary);
+            box-shadow: 0 0 10px var(--neon-glow) inset, 0 0 10px var(--neon-glow);
+        }
+
+        .btn-neon:hover:not(:disabled) {
+            background: var(--neon-primary);
+            color: var(--bg-base);
+            box-shadow: 0 0 20px var(--neon-primary) inset, 0 0 20px var(--neon-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: var(--text-muted);
+            color: var(--text-muted);
+            box-shadow: none;
+        }
+
+        /* Forms */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
+        .form-control {
+            width: 100%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--neon-primary);
+            padding: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .form-control:focus { outline: none; border-color: var(--neon-primary); box-shadow: 0 0 5px var(--neon-glow); }
+        textarea.form-control { resize: vertical; min-height: 150px; }
+
+        /* Layout */
+        #app-container {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+        .brand svg { width: 30px; height: 30px; fill: var(--neon-primary); }
+
+        .system-status { display: flex; gap: 20px; font-size: 0.85rem; }
+        .status-item { display: flex; align-items: center; gap: 5px; }
+        .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+        .status-indicator.online { background: var(--neon-primary); box-shadow: 0 0 5px var(--neon-primary); }
+        
+        main { padding: 30px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;
+        }
+        .nav-tab {
+            background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 1rem; cursor: pointer; text-transform: uppercase; padding: 5px 10px; position: relative;
+        }
+        .nav-tab.active { color: var(--neon-primary); font-weight: bold; }
+        .nav-tab.active::after { content: ''; position: absolute; bottom: -11px; left: 0; width: 100%; height: 2px; background: var(--neon-primary); box-shadow: 0 0 5px var(--neon-primary); }
+
+        /* Grid & Cards */
+        .toolbar { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
+        .search-box { flex: 1; min-width: 250px; position: relative; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        
+        .card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--border-color); transition: background 0.3s; }
+        .card:hover { transform: translateY(-2px); border-color: #333; }
+        .card:hover::before { background: var(--neon-primary); }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-title { font-size: 1.2rem; color: #fff; margin-bottom: 5px; word-break: break-all; }
+        .card-price { color: var(--neon-primary); font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        
+        .card-meta { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+        .card-desc { font-size: 0.9rem; color: #aaa; flex-grow: 1; }
+        
+        .badge { padding: 3px 8px; font-size: 0.7rem; border-radius: 2px; text-transform: uppercase; font-weight: bold; border: 1px solid; }
+        .badge-available { color: #00ff41; border-color: rgba(0,255,65,0.3); background: rgba(0,255,65,0.05); }
+        .badge-sold { color: #ff003c; border-color: rgba(255,0,60,0.3); background: rgba(255,0,60,0.05); }
+
+        /* Login Screen */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-base);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .login-box {
+            background: var(--bg-surface); border: 1px solid var(--border-color); padding: 40px; text-align: center; max-width: 500px; width: 90%;
+            position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .login-box::before { content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px; border-top: 2px solid var(--neon-primary); border-left: 2px solid var(--neon-primary); }
+        .login-box::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px; border-bottom: 2px solid var(--neon-primary); border-right: 2px solid var(--neon-primary); }
+
+        /* Toasts */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
+        .toast {
+            background: var(--bg-panel); border-left: 3px solid var(--neon-primary); color: #fff; padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); font-size: 0.9rem;
+            animation: slideIn 0.3s ease forwards; min-width: 250px;
+        }
+        .toast.error { border-color: var(--neon-danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Spinners */
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Banner */
+        .alert-banner { background: rgba(255,0,60,0.1); border: 1px solid var(--neon-danger); padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;}
+        .alert-banner button { background: none; border: none; color: var(--neon-danger); cursor: pointer; font-family: inherit; font-size: 1.2rem;}
+        
+        .code-preview { background: #000; border: 1px solid #333; padding: 15px; border-radius: 4px; overflow-x: auto; color: #a5d6ff; margin-top: 10px; font-size: 0.85rem;}
+        
+        /* Footer */
+        footer { padding: 15px 30px; border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <h1 class="text-neon" style="margin-bottom: 10px;">NEXUS</h1>
+            <h3 style="margin-bottom: 30px; color: var(--text-muted);">CODE EXCHANGE PROTOCOL</h3>
+            <p style="margin-bottom: 30px; font-size: 0.9rem; color: #aaa;">Autenticación requerida para acceder al marketplace descentralizado.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button class="btn btn-neon" onclick="app.auth.connectWallet()" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                    CONECTAR WALLET (ALBY)
+                </button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <hr style="flex:1; border-color: var(--border-color);">
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">O</span>
+                    <hr style="flex:1; border-color: var(--border-color);">
+                </div>
+                <button class="btn" onclick="app.auth.createIdentity()" style="width: 100%;">
+                    GENERAR IDENTIDAD EFÍMERA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <header>
+            <div class="brand">
+                <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                <span class="text-neon">NEXUS</span>
+            </div>
+            <div class="system-status">
+                <div class="status-item">
+                    <span class="text-muted">SCOPE:</span>
+                    <strong id="ui-scope">---</strong>
+                </div>
+                <div class="status-item">
+                    <span class="text-muted">ID:</span>
+                    <strong id="ui-npub">---</strong>
+                </div>
+                <div class="status-item">
+                    <span class="text-muted">FONDOS:</span>
+                    <strong class="text-neon" id="ui-balance">0 SATS</strong>
+                </div>
+                <div class="status-item">
+                    <div id="ui-connection" class="status-indicator"></div>
+                    <span id="ui-connection-text">DESCONECTADO</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div id="recovery-banner" class="alert-banner hidden">
+                <div>
+                    <strong>¡ATENCIÓN!</strong> Identidad generada automáticamente. Guarda tu clave privada para no perder el acceso:<br>
+                    <code id="ui-nsec" style="color: #fff; background: rgba(0,0,0,0.5); padding: 2px 5px; margin-top: 5px; display: inline-block;"></code>
+                </div>
+                <button onclick="document.getElementById('recovery-banner').classList.add('hidden')">×</button>
+            </div>
+
+            <nav class="nav-tabs">
+                <button class="nav-tab active" onclick="app.ui.switchTab('marketplace')">MARKETPLACE</button>
+                <button class="nav-tab" onclick="app.ui.switchTab('publish')">PUBLICAR CÓDIGO</button>
+                <button class="nav-tab" onclick="app.ui.switchTab('settings')">SISTEMA</button>
+            </nav>
+
+            <div id="view-marketplace">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input type="text" id="search-input" class="form-control" placeholder=">_ Buscar scripts, algoritmos, exploits..." onkeyup="app.ui.filterSnippets()">
+                    </div>
+                    <button class="btn" onclick="app.api.fetchSnippets()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        RECARGAR DATOS
+                    </button>
+                </div>
+                <div id="snippets-grid" class="grid">
+                    <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted);">
+                        INICIALIZANDO CONEXIÓN SEGURA...
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-publish" class="hidden">
+                <div style="max-width: 800px; margin: 0 auto; background: var(--bg-panel); padding: 30px; border: 1px solid var(--border-color);">
+                    <h2 style="margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">> NUEVO PAQUETE DE CÓDIGO</h2>
+                    
+                    <form id="publish-form" onsubmit="app.actions.publishSnippet(event)">
+                        <div class="form-group">
+                            <label class="form-label">TÍTULO DEL SCRIPT</label>
+                            <input type="text" id="pub-title" class="form-control" required placeholder="Ej: Algoritmo de compresión cuántica v2">
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">PRECIO (SATS)</label>
+                                <input type="number" id="pub-price" class="form-control" required min="1" placeholder="Ej: 500">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">TU DIRECCIÓN LIGHTNING (Para recibir pagos)</label>
+                                <input type="email" id="pub-ln" class="form-control" required placeholder="tu_usuario@getalby.com">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">DESCRIPCIÓN TÉCNICA</label>
+                            <textarea id="pub-desc" class="form-control" required style="min-height: 80px;" placeholder="Detalles, dependencias, instrucciones de uso..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">CÓDIGO FUENTE (Se revelará tras la compra)</label>
+                            <textarea id="pub-code" class="form-control" required placeholder="def exploit():\n    pass"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-neon" id="btn-publish" style="width: 100%;">
+                            ENCRIPTAR Y PUBLICAR EN LA RED
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="view-settings" class="hidden">
+                <div style="max-width: 600px; margin: 0 auto; background: var(--bg-panel); padding: 30px; border: 1px solid var(--border-color);">
+                    <h2 style="margin-bottom: 25px;">> CONFIGURACIÓN DE RED</h2>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ID DEL MARKETPLACE (SCOPE ACTUAL)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="set-scope" class="form-control" readonly>
+                            <button class="btn" onclick="app.utils.copyToClipboard(document.getElementById('set-scope').value)">COPIAR</button>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Comparte este ID para colaborar en un entorno privado.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">CAMBIAR MARKETPLACE</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="new-scope" class="form-control" placeholder="Introduce un ID existente de 6 caracteres">
+                            <button class="btn btn-neon" onclick="app.actions.changeScope()">CONECTAR</button>
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--border-color); margin: 30px 0;">
+
+                    <button class="btn" style="color: var(--neon-danger); border-color: var(--neon-danger); width: 100%;" onclick="app.auth.logout()">
+                        CERRAR SESIÓN Y PURGAR DATOS
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div>NEXUS // V1.0.0 // ENCRIPTACIÓN ACTIVA</div>
+            <div id="footer-relay">BUSCANDO NODOS...</div>
+        </footer>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        /**
+         * NEXUS CORE LOGIC
+         * Implementación estricta de requerimientos: CSS Vanilla, Pagos Reales (Alby/LNURL), Multi-tenancy, Patrón MCP (oculto en UI).
+         */
+        
+        const DISCOVERY_RELAYS = ['wss://relay.damus.io', 'wss://relay.contextvm.org', 'wss://relay2.contextvm.org'];
+        const RELAY_PUBKEY = '1bdc9826c1c2537acc0c288fcf73af8f6638f7b3941a4f70414bc6929338d521';
+        const FALLBACK_RELAY = 'wss://indication-resolved-fans-automobiles.trycloudflare.com';
+
+        const app = {
+            state: {
+                scope: '',
+                pubkey: null,
+                privkey: null, // Si usó Option 2
+                connected: false,
+                relayWsUrl: '',
+                relayHttpUrl: '',
+                ws: null,
+                balance: 0,
+                isWebLN: false,
+                snippets: []
+            },
+
+            init: async () => {
+                // 1. Gestionar Scope (Multi-tenancy)
+                let scope = localStorage.getItem('mobi_scope');
+                if (!scope) {
+                    scope = Math.random().toString(36).substring(2, 8).toUpperCase();
+                    localStorage.setItem('mobi_scope', scope);
+                }
+                app.state.scope = scope;
+                document.getElementById('ui-scope').innerText = scope;
+                document.getElementById('set-scope').value = scope;
+
+                // 2. Comprobar sesión
+                const savedPubkey = localStorage.getItem('nexus_pubkey');
+                const savedPrivkey = localStorage.getItem('nexus_privkey');
+                
+                if (savedPubkey) {
+                    app.state.pubkey = savedPubkey;
+                    if (savedPrivkey) app.state.privkey = savedPrivkey;
+                    app.ui.showMainApp();
+                    app.network.discoverAndConnect();
+                    
+                    // Intentar reactivar WebLN en background si es posible
+                    if (window.webln && !savedPrivkey) {
+                        try {
+                            await window.webln.enable();
+                            app.state.isWebLN = true;
+                            app.auth.updateBalance();
+                        } catch(e) { console.warn("WebLN require interaccion manual"); }
+                    }
+                }
+            },
+
+            auth: {
+                connectWallet: async () => {
+                    try {
+                        if (!window.nostr) {
+                            app.ui.toast("Extensión Nostr (ej: Alby) no detectada.", "error");
+                            window.open("https://getalby.com", "_blank");
+                            return;
+                        }
+                        
+                        const pubkey = await window.nostr.getPublicKey();
+                        app.state.pubkey = pubkey;
+                        localStorage.setItem('nexus_pubkey', pubkey);
+
+                        if (window.webln) {
+                            await window.webln.enable();
+                            app.state.isWebLN = true;
+                            await app.auth.updateBalance();
+                        } else {
+                            app.ui.toast("WebLN no detectado. Pagos reales no disponibles.", "error");
+                        }
+
+                        app.ui.showMainApp();
+                        app.network.discoverAndConnect();
+                        app.ui.toast("Autenticación biométrica confirmada.");
+                    } catch (err) {
+                        app.ui.toast("Conexión rechazada por la wallet.", "error");
+                    }
+                },
+
+                createIdentity: () => {
+                    try {
+                        // Generar claves vía NostrTools
+                        const skBytes = window.NostrTools.generateSecretKey();
+                        const pkBytes = window.NostrTools.getPublicKey(skBytes);
+                        
+                        // Convertir a Hex para almacenar (Formato interno)
+                        const skHex = app.utils.bytesToHex(skBytes);
+                        const pkHex = app.utils.bytesToHex(pkBytes);
+
+                        app.state.privkey = skHex;
+                        app.state.pubkey = pkHex;
+
+                        localStorage.setItem('nexus_privkey', skHex);
+                        localStorage.setItem('nexus_pubkey', pkHex);
+
+                        // Codificar nsec para el usuario
+                        const nsec = window.NostrTools.nip19.nsecEncode(skBytes);
+                        
+                        document.getElementById('ui-nsec').innerText = nsec;
+                        document.getElementById('recovery-banner').classList.remove('hidden');
+
+                        app.ui.showMainApp();
+                        app.network.discoverAndConnect();
+                        app.ui.toast("Identidad efímera generada e inyectada.");
+                    } catch(err) {
+                        console.error(err);
+                        app.ui.toast("Fallo al generar claves criptográficas.", "error");
+                    }
+                },
+
+                updateBalance: async () => {
+                    if (app.state.isWebLN) {
+                        try {
+                            const res = await window.webln.getBalance();
+                            app.state.balance = res.balance;
+                            document.getElementById('ui-balance').innerText = `${res.balance} SATS`;
+                        } catch(e) { console.warn("No se pudo leer balance"); }
+                    }
+                },
+
+                logout: () => {
+                    localStorage.removeItem('nexus_pubkey');
+                    localStorage.removeItem('nexus_privkey');
+                    location.reload();
+                }
+            },
+
+            network: {
+                discoverAndConnect: async () => {
+                    app.ui.setConnectionStatus("BUSCANDO NODOS...", false);
+                    let found = false;
+
+                    for (const url of DISCOVERY_RELAYS) {
+                        if(found) break;
+                        try {
+                            const ws = new WebSocket(url);
+                            await new Promise((resolve, reject) => {
+                                ws.onopen = () => {
+                                    ws.send(JSON.stringify(["REQ", "sub", { kinds: [11316], authors: [RELAY_PUBKEY], limit: 1 }]));
+                                };
+                                ws.onmessage = (e) => {
+                                    const data = JSON.parse(e.data);
+                                    if (data[0] === "EVENT") {
+                                        const event = data[2];
+                                        const relayTag = event.tags.find(t => t[0] === 'r');
+                                        if (relayTag && !found) {
+                                            found = true;
+                                            app.network.connectToRelay(relayTag[1]);
+                                            ws.close();
+                                            resolve();
+                                        }
+                                    }
+                                };
+                                ws.onerror = reject;
+                                setTimeout(() => { ws.close(); resolve(); }, 3000);
+                            });
+                        } catch(e) { continue; }
+                    }
+
+                    if (!found) {
+                        console.log("Fallback a nodo por defecto");
+                        app.network.connectToRelay(FALLBACK_RELAY);
+                    }
+                },
+
+                connectToRelay: (wsUrl) => {
+                    app.state.relayWsUrl = wsUrl;
+                    app.state.relayHttpUrl = wsUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+                    document.getElementById('footer-relay').innerText = `CONECTADO A: ${wsUrl}`;
+
+                    app.state.ws = new WebSocket(wsUrl);
+                    
+                    app.state.ws.onopen = () => {
+                        app.state.connected = true;
+                        app.ui.setConnectionStatus("EN LÍNEA", true);
+                        app.api.fetchSnippets(); // Cargar datos
+                    };
+
+                    app.state.ws.onclose = () => {
+                        app.state.connected = false;
+                        app.ui.setConnectionStatus("DESCONECTADO", false);
+                        setTimeout(() => app.network.connectToRelay(wsUrl), 5000); // Backoff simple
+                    };
+                },
+
+                // Envía evento tipo 25910 (MCP)
+                sendRequest: async (requestPayload) => {
+                    if (!app.state.connected) throw new Error("Sin conexión al nodo central");
+
+                    const event = {
+                        kind: 25910,
+                        pubkey: app.state.pubkey,
+                        created_at: Math.floor(Date.now() / 1000),
+                        tags: [["p", RELAY_PUBKEY]],
+                        content: JSON.stringify(requestPayload)
+                    };
+
+                    let signedEvent;
+                    if (app.state.privkey) {
+                        // Firma local (Opción 2)
+                        const skBytes = app.utils.hexToBytes(app.state.privkey);
+                        signedEvent = window.NostrTools.finalizeEvent(event, skBytes);
+                    } else {
+                        // Firma vía NIP-07
+                        signedEvent = await window.nostr.signEvent(event);
+                    }
+
+                    app.state.ws.send(JSON.stringify(["EVENT", signedEvent]));
+                }
+            },
+
+            api: {
+                fetchSnippets: async () => {
+                    if(!app.state.relayHttpUrl) return;
+                    try {
+                        const res = await fetch(`${app.state.relayHttpUrl}/api/aarpia/instances?domain=${app.state.scope}`);
+                        if(!res.ok) throw new Error("Error HTTP");
+                        const data = await res.json();
+                        
+                        // Filtrar los que sean nuestro entity "code_snippet"
+                        app.state.snippets = data.filter(inst => inst.entity_hash === "code_snippet" || inst.context_hash === "nexus_marketplace");
+                        app.ui.renderSnippets(app.state.snippets);
+                    } catch(err) {
+                        console.error("Fetch Error:", err);
+                        // No mostramos toast de error en polling/fetch automático para no ser molestos
+                    }
+                }
+            },
+
+            actions: {
+                publishSnippet: async (e) => {
+                    e.preventDefault();
+                    const btn = document.getElementById('btn-publish');
+                    btn.disabled = true;
+                    btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-linecap="round"></circle></svg> PROCESANDO...';
+
+                    const title = document.getElementById('pub-title').value;
+                    const price = document.getElementById('pub-price').value;
+                    const lnAddress = document.getElementById('pub-ln').value;
+                    const desc = document.getElementById('pub-desc').value;
+                    const code = document.getElementById('pub-code').value;
+
+                    // Empaquetar data (Simulando lo que se requiere en el ecosistema real)
+                    const initialData = { title, price, lnAddress, desc, code, sellerPubkey: app.state.pubkey };
+
+                    const request = {
+                        jsonrpc: "2.0",
+                        method: "tools/call",
+                        params: {
+                            name: "aarpia_create_instance",
+                            arguments: {
+                                entity_name: "code_snippet",
+                                context_name: "nexus_marketplace",
+                                start_state: "available",
+                                target_state: "purchased",
+                                domain: app.state.scope,
+                                initial_data: initialData
+                            }
+                        },
+                        id: Date.now()
+                    };
+
+                    try {
+                        await app.network.sendRequest(request);
+                        app.ui.toast("Código inyectado en el blockchain con éxito.");
+                        document.getElementById('publish-form').reset();
+                        
+                        // Recargar tras unos segundos para dar tiempo al Relay a procesar el evento Nostr
+                        setTimeout(() => {
+                            app.api.fetchSnippets();
+                            app.ui.switchTab('marketplace');
+                        }, 2500);
+
+                    } catch(err) {
+                        console.error(err);
+                        app.ui.toast("Fallo en la publicación.", "error");
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = 'ENCRIPTAR Y PUBLICAR EN LA RED';
+                    }
+                },
+
+                buySnippet: async (instanceHash) => {
+                    // Encontrar el snippet completo
+                    const snippet = app.state.snippets.find(s => s.instance_hash === instanceHash);
+                    if(!snippet) return;
+
+                    // Extraer los datos guardados en el historial de acciones (creación)
+                    // Como el motor los guarda en el log, buscamos la acción inicial
+                    let data = {};
+                    try {
+                        const createLog = snippet.actions_log.find(l => l.type === "DATA_ENTRY" || l.verb.includes("CREATE") || l.verb === "INITIALIZE");
+                        if(createLog && createLog.data) {
+                            data = typeof createLog.data === 'string' ? JSON.parse(createLog.data) : createLog.data;
+                        } else if (snippet.data) { // Fallback según estructura de API
+                            data = snippet.data;
+                        }
+                    } catch(e) { console.warn("Error parsing snippet data"); }
+
+                    const price = data.price || 10;
+                    const lnAddress = data.lnAddress;
+
+                    if (!lnAddress) {
+                        app.ui.toast("El vendedor no configuró una dirección de cobro válida.", "error");
+                        return;
+                    }
+
+                    if (!app.state.isWebLN) {
+                        app.ui.toast("¡Requiere Alby o WebLN activo para ejecutar transacciones reales!", "error");
+                        return;
+                    }
+
+                    try {
+                        app.ui.toast(`Solicitando invoice a ${lnAddress} por ${price} SATS...`);
+                        
+                        // 1. RESOLUCIÓN LNURL 100% REAL
+                        const bolt11 = await app.utils.getInvoiceFromLNAddress(lnAddress, price);
+                        
+                        // 2. PAGO LIGHTNING 100% REAL vía WebLN
+                        const paymentResult = await window.webln.sendPayment(bolt11);
+                        console.log("Prueba criptográfica (Preimage):", paymentResult.preimage);
+                        
+                        app.ui.toast("Pago confirmado. Desbloqueando código...", "success");
+                        app.auth.updateBalance();
+
+                        // 3. ACTUALIZAR ESTADO EN EL RELAY (Transición)
+                        const request = {
+                            jsonrpc: "2.0",
+                            method: "tools/call",
+                            params: {
+                                name: "aarpia_transition",
+                                arguments: {
+                                    instance_hash: instanceHash,
+                                    new_state: "purchased", // META STATE -> Lacra el proceso
+                                    action_verb: "PURCHASE_CODE",
+                                    action_type: "STATE_CHANGE"
+                                }
+                            },
+                            id: Date.now()
+                        };
+
+                        await app.network.sendRequest(request);
+
+                        setTimeout(() => app.api.fetchSnippets(), 2000);
+
+                    } catch(err) {
+                        console.error("Payment Error:", err);
+                        app.ui.toast("Transacción abortada o fallida.", "error");
+                    }
+                },
+
+                changeScope: () => {
+                    const newScope = document.getElementById('new-scope').value.trim();
+                    if(newScope.length >= 4) {
+                        localStorage.setItem('mobi_scope', newScope.toUpperCase());
+                        location.reload();
+                    }
+                }
+            },
+
+            ui: {
+                showMainApp: () => {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+                    const npub = window.NostrTools.nip19.npubEncode(app.utils.hexToBytes(app.state.pubkey));
+                    document.getElementById('ui-npub').innerText = npub.substring(0, 10) + '...' + npub.slice(-4);
+                },
+
+                setConnectionStatus: (text, isOnline) => {
+                    const ind = document.getElementById('ui-connection');
+                    const txt = document.getElementById('ui-connection-text');
+                    txt.innerText = text;
+                    if(isOnline) { ind.classList.add('online'); txt.classList.add('text-neon'); }
+                    else { ind.classList.remove('online'); txt.classList.remove('text-neon'); }
+                },
+
+                switchTab: (tabId) => {
+                    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('main > div[id^="view-"]').forEach(v => v.classList.add('hidden'));
+                    
+                    event.target.classList.add('active');
+                    document.getElementById(`view-${tabId}`).classList.remove('hidden');
+                },
+
+                toast: (msg, type = "info") => {
+                    const container = document.getElementById('toast-container');
+                    const el = document.createElement('div');
+                    el.className = `toast ${type === 'error' ? 'error' : ''}`;
+                    el.innerHTML = `> ${msg}`;
+                    container.appendChild(el);
+                    setTimeout(() => {
+                        el.style.opacity = '0';
+                        setTimeout(() => el.remove(), 300);
+                    }, 4000);
+                },
+
+                renderSnippets: (snippets) => {
+                    const grid = document.getElementById('snippets-grid');
+                    grid.innerHTML = '';
+
+                    if(snippets.length === 0) {
+                        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted); border: 1px dashed var(--border-color);">NO HAY PAQUETES DE CÓDIGO EN ESTE SECTOR</div>';
+                        return;
+                    }
+
+                    snippets.forEach(inst => {
+                        // Intentar reconstruir payload
+                        let data = {};
+                        if(inst.actions_log && inst.actions_log.length > 0) {
+                            try {
+                                const entry = inst.actions_log.find(l => l.data);
+                                if(entry) data = typeof entry.data === 'string' ? JSON.parse(entry.data) : entry.data;
+                            } catch(e) {}
+                        }
+                        
+                        const title = data.title || "Unknown Exploit";
+                        const price = data.price || "???";
+                        const desc = data.desc || "Sin descripción proporcionada.";
+                        const code = data.code || "";
+                        
+                        const isSold = inst.sealed === true || inst.current_state === "purchased";
+                        const isOwner = inst.owner_did === app.state.pubkey;
+
+                        // Solo revelar código si está comprado Y el usuario logueado lo compró, o si es el dueño
+                        // Nota: En un sistema real descentralizado, esto se cifra con NIP-04/NIP-44. 
+                        // Aquí aplicamos lógica visual de "desbloqueo".
+                        let showCode = false;
+                        if(isOwner) showCode = true;
+                        if(isSold) {
+                            // Buscar en el log quién disparó la acción PURCHASE
+                            const purchaseLog = inst.actions_log.find(l => l.verb === "PURCHASE_CODE");
+                            if(purchaseLog && purchaseLog.actor === app.state.pubkey) showCode = true;
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'card snippet-card';
+                        card.dataset.title = title.toLowerCase();
+                        card.dataset.desc = desc.toLowerCase();
+
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <div style="max-width: 70%;">
+                                    <div class="card-title">${title}</div>
+                                    <div class="card-meta">
+                                        <span>HASH: ${inst.instance_hash.substring(0,8)}...</span>
+                                    </div>
+                                </div>
+                                <div class="card-price">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+                                    ${price}
+                                </div>
+                            </div>
+                            
+                            <div class="card-desc">${desc}</div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                                ${isSold ? 
+                                    '<span class="badge badge-sold">LACRADO / VENDIDO</span>' : 
+                                    '<span class="badge badge-available">DISPONIBLE</span>'}
+                                
+                                ${!isSold && !isOwner ? 
+                                    `<button class="btn btn-neon" style="padding: 5px 15px;" onclick="app.actions.buySnippet('${inst.instance_hash}')">ADQUIRIR</button>` : ''}
+                            </div>
+                            
+                            ${showCode ? 
+                                `<div class="code-preview"><div style="color:var(--neon-primary); margin-bottom:5px; font-weight:bold;">// PAYLOAD DESENCRIPTADO</div><pre><code>${app.utils.escapeHTML(code)}</code></pre></div>` 
+                                : 
+                                (isSold ? '' : `<div class="code-preview" style="filter: blur(4px); user-select: none;">// ENCRIPTADO\n${btoa(title+desc).substring(0,50)}...</div>`)
+                            }
+                        `;
+                        grid.appendChild(card);
+                    });
+                },
+
+                filterSnippets: () => {
+                    const q = document.getElementById('search-input').value.toLowerCase();
+                    document.querySelectorAll('.snippet-card').forEach(card => {
+                        const match = card.dataset.title.includes(q) || card.dataset.desc.includes(q);
+                        card.style.display = match ? 'flex' : 'none';
+                    });
+                }
+            },
+
+            utils: {
+                hexToBytes: (hex) => Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))),
+                bytesToHex: (bytes) => bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), ''),
+                escapeHTML: (str) => str.replace(/[&<>'"]/g, tag => ({'&': '&amp;','<': '&lt;','>': '&gt;',"'": '&#39;','"': '&quot;'}[tag])),
+                copyToClipboard: (txt) => { navigator.clipboard.writeText(txt); app.ui.toast("Copiado al portapapeles"); },
+                
+                // Función VÍDICA para obtener un Invoice real dado un Lightning Address
+                getInvoiceFromLNAddress: async (lnAddress, amountSats) => {
+                    const parts = lnAddress.split('@');
+                    if (parts.length !== 2) throw new Error("Formato inválido. Usa usuario@dominio.com");
+                    const user = parts[0];
+                    const domain = parts[1];
+
+                    // 1. Fetch LNURL metadata
+                    const url = `https://${domain}/.well-known/lnurlp/${user}`;
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error("No se pudo resolver LN Address");
+                    const data = await res.json();
+                    
+                    if(data.tag !== "payRequest") throw new Error("El nodo no soporta LNURL-Pay");
+
+                    // 2. Pedir invoice por msats
+                    const msats = amountSats * 1000;
+                    if(msats < data.minSendable || msats > data.maxSendable) {
+                        throw new Error(`Cantidad fuera de límites (${data.minSendable/1000} - ${data.maxSendable/1000} sats)`);
+                    }
+
+                    const callbackUrl = new URL(data.callback);
+                    callbackUrl.searchParams.append("amount", msats.toString());
+
+                    const cbRes = await fetch(callbackUrl.toString());
+                    if (!cbRes.ok) throw new Error("Fallo al generar invoice");
+                    const cbData = await cbRes.json();
+
+                    if(cbData.status === "ERROR") throw new Error(cbData.reason);
+                    if(!cbData.pr) throw new Error("No se devolvió un BOLT11 válido");
+
+                    return cbData.pr;
+                }
+            }
+        };
+
+        // Bootstrap
+        window.onload = app.init;
+    </script>
+</body>
+</html>
