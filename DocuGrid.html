@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuGrid - Sistema de Gestión Documental</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <style>
+        :root {
+            /* Paleta de colores: Esmeralda y Pizarra (Estilo corporativo limpio) */
+            --primary: #059669;
+            --primary-hover: #047857;
+            --bg-body: #f1f5f9;
+            --bg-surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --error: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+
+            --font-ui: 'Space Grotesk', sans-serif;
+            --font-data: 'Roboto', sans-serif;
+
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-data);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        button,
+        .ui-text {
+            font-family: var(--font-ui);
+        }
+
+        /* Utilidades */
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        /* Botones */
+        button {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        button.primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        button.primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Pantalla de Login */
+        #auth-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-body);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .auth-card {
+            background: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .auth-card h1 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .auth-card p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .auth-buttons button {
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+
+        /* Alerta de Clave de Respaldo */
+        #backup-alert {
+            background-color: #fffbeb;
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: var(--radius-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .backup-key {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            user-select: all;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(8px);
+            background: var(--glass-bg);
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--error);
+        }
+
+        .status-dot.connected {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .user-profile {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--border-color);
+            object-fit: cover;
+        }
+
+        /* Layout Principal */
+        main {
+            flex: 1;
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.5rem 1rem;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 100%;
+            font-family: inherit;
+            color: var(--text-main);
+        }
+
+        /* Tabla de Datos */
+        .table-container {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background: #f1f5f9;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Modales */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        /* Progreso Importación */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Toasts */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: var(--text-main);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            animation: slideIn 0.3s ease forwards;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toast.error {
+            background: var(--error);
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+        }
+
+        /* Tarjeta de Usuario Hover (Consenso de Seguidores) */
+        #user-card {
+            position: absolute;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            width: 250px;
+            z-index: 200;
+            pointer-events: auto;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        #user-card.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .uc-stats {
+            display: flex;
+            width: 100%;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .uc-stat-val {
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: var(--text-main);
+        }
+
+        .uc-stat-lbl {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Utilidad de Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Filtros de columna */
+        .filter-row th {
+            padding: 4px 6px;
+            background: #f1f5f9;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: inherit;
+            background: #fff;
+            color: var(--text-main);
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Celdas editables */
+        td.editable {
+            cursor: pointer;
+            position: relative;
+            transition: background 0.15s;
+        }
+
+        td.editable:hover {
+            background: #e0f2fe !important;
+        }
+
+        td.editable .edit-input {
+            width: 100%;
+            padding: 2px 6px;
+            border: 2px solid var(--primary);
+            border-radius: 4px;
+            font-size: inherit;
+            font-family: inherit;
+            background: #fff;
+            outline: none;
+        }
+
+        /* Botón de historial en fila */
+        .btn-history {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+
+        .btn-history:hover {
+            background: #e2e8f0;
+        }
+
+        /* Modal historial */
+        .history-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-top: 1rem;
+        }
+
+        .history-entry {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-left: 3px solid var(--border-color);
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .history-entry.state-change {
+            border-left-color: var(--primary);
+            background: #f0fdf4;
+        }
+
+        .history-entry.data-entry {
+            border-left-color: #7c3aed;
+            background: #faf5ff;
+        }
+
+        .history-entry .he-time {
+            color: var(--text-muted);
+            font-family: monospace;
+            font-size: 0.7rem;
+            min-width: 130px;
+        }
+
+        .history-entry .he-badge {
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .he-badge.sc {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .he-badge.de {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .history-entry .he-detail {
+            color: var(--text-main);
+            flex: 1;
+        }
+
+        .he-old {
+            text-decoration: line-through;
+            color: var(--error);
+            margin-right: 4px;
+        }
+
+        .he-new {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .btn-clear-filters {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            background: #f3f4f6;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text-muted);
+        }
+
+        .btn-clear-filters:hover {
+            background: #e5e7eb;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-card">
+            <h1>DocuGrid</h1>
+            <p class="ui-text">Gestión Documental Descentralizada</p>
+            <div class="auth-buttons">
+                <button class="primary" onclick="loginWithNIP07()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5H5a2 2 0 0 1 0-4h16V5" />
+                    </svg>
+                    Conectar Billetera (NIP-07)
+                </button>
+                <button onclick="createIdentity()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    Crear Identidad Rápida
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content" class="hidden">
+
+        <div id="backup-alert" class="hidden">
+            <div>
+                <strong>⚠️ Guarda tu clave secreta:</strong> Esta es la única forma de recuperar tu cuenta.
+                <div class="backup-key" id="backup-key-text"></div>
+            </div>
+            <button onclick="copyBackupKey()">Copiar</button>
+        </div>
+
+        <header>
+            <div class="brand">DocuGrid</div>
+            <div class="header-controls">
+                <div
+                    style="display:flex;align-items:center;gap:6px;font-size:0.8rem;background:var(--bg-body);padding:4px 10px;border-radius:12px;border:1px solid var(--border-color);">
+                    <select id="owner-mode" onchange="changeOwnerMode(this.value)"
+                        style="border:none;background:transparent;font-size:0.8rem;font-family:inherit;cursor:pointer;color:var(--text-primary);">
+                        <option value="persona">👤 Persona</option>
+                        <option value="entidad">🏢 Proceso</option>
+                    </select>
+                    <input id="entity-name-input" type="text" placeholder="Nombre proceso..."
+                        style="display:none;border:none;border-bottom:1px solid var(--border-color);background:transparent;font-size:0.8rem;width:120px;padding:2px 4px;color:var(--text-primary);font-family:inherit;"
+                        oninput="updateEntityName(this.value)">
+                </div>
+                <div class="ui-text"
+                    style="font-size: 0.8rem; background: var(--bg-body); padding: 0.2rem 0.6rem; border-radius: 12px; border: 1px solid var(--border-color);"
+                    title="ID de Espacio de Trabajo">
+                    Espacio: <span id="scope-display" style="font-weight:bold;">---</span>
+                </div>
+                <div class="status-indicator">
+                    <div id="status-dot" class="status-dot"></div>
+                    <span id="status-text">Desconectado</span>
+                </div>
+                <button class="icon-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
+                <div class="user-profile" id="current-user-profile">
+                    <img id="user-avatar" class="avatar"
+                        src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>" alt="Avatar">
+                    <span id="user-npub" class="ui-text" style="font-size:0.9rem; font-weight:500;"></span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="toolbar">
+                <div class="search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="color:var(--text-muted); margin-right:8px;">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
+                    </svg>
+                    <input type="text" id="search-input" placeholder="Buscar en documentos..." onkeyup="filterTable()">
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn-clear-filters" onclick="clearAllFilters()">✕ Limpiar filtros</button>
+                    <label
+                        style="display:flex;align-items:center;gap:4px;font-size:0.75rem;color:var(--text-muted);cursor:pointer;">
+                        <input type="checkbox" id="toggle-sealed" onchange="toggleSealed(this.checked)"> Archivados
+                    </label>
+                    <input type="file" id="csv-file-input" accept=".csv" class="hidden" onchange="handleCSVFile(event)">
+                    <button onclick="document.getElementById('csv-file-input').click()">📄 Importar CSV</button>
+                    <button onclick="exportCSV()">⬇ CSV</button>
+                    <button onclick="exportJSON()">⬇ JSON</button>
+                    <button class="primary" onclick="openNewRowModal()">+ Nuevo Registro</button>
+                </div>
+            </div>
+            <div id="selection-bar" class="hidden"
+                style="background:#eff6ff;padding:6px 16px;border-radius:8px;display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:0.85rem;">
+                <span id="selection-count" style="font-weight:600;color:var(--primary);"></span>
+                <button onclick="deleteSelected()"
+                    style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:inherit;">🗑
+                    Eliminar seleccionados</button>
+                <button onclick="state.selectedIds.clear();updateSelectionBar();renderTable();"
+                    style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.8rem;">Deseleccionar</button>
+            </div>
+
+            <div class="table-container">
+                <table id="data-table">
+                    <thead id="table-head"></thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+                <div id="empty-state" class="empty-state hidden">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <path d="M14 2v6h6" />
+                        <path d="M16 13H8" />
+                        <path d="M16 17H8" />
+                        <path d="M10 9H8" />
+                    </svg>
+                    <h3>No hay documentos</h3>
+                    <p>Importa un CSV o crea un registro manualmente para comenzar.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-new-row" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Nuevo Registro</h2>
+                <button class="close-btn" onclick="closeModal('modal-new-row')">×</button>
+            </div>
+            <div id="dynamic-form-container">
+            </div>
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button class="primary" onclick="submitNewRow()" id="btn-submit-row">Guardar Registro</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-csv-progress" class="modal-overlay">
+        <div class="modal" style="text-align: center;">
+            <h2>Importando Documentos</h2>
+            <p id="csv-progress-text" style="color: var(--text-muted); margin-top: 1rem;">Procesando fila 0 de 0...</p>
+            <div class="progress-bar">
+                <div id="csv-progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-settings" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Ajustes del Sistema</h2>
+                <button class="close-btn" onclick="closeModal('modal-settings')">×</button>
+            </div>
+            <div class="form-group">
+                <label>ID de Espacio (Marketplace Scope)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="settings-scope" maxlength="10">
+                    <button onclick="saveScope()">Aplicar</button>
+                </div>
+                <small style="color:var(--text-muted)">Comparte este ID para colaborar en los mismos documentos.</small>
+            </div>
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>Consola de Conexión Relay</label>
+                <div id="relay-console"
+                    style="background:#0f172a; color:#10b981; font-family:monospace; padding:0.5rem; border-radius:4px; height:120px; overflow-y:auto; font-size:0.75rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-history" class="modal-overlay">
+        <div class="modal" style="max-width:640px;">
+            <div class="modal-header">
+                <h2>📜 Historial de Cambios</h2>
+                <button class="close-btn" onclick="closeModal('modal-history')">×</button>
+            </div>
+            <div id="history-body" style="padding:1rem; max-height:60vh; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="user-card" onmouseenter="clearCardTimeout()" onmouseleave="hideHoverCardWithDelay()">
+        <img id="uc-avatar" class="avatar" style="width:64px; height:64px;" src="" alt="">
+        <div id="uc-npub" class="ui-text"
+            style="font-size:0.85rem; font-weight:600; text-align:center; word-break:break-all;"></div>
+        <div class="uc-stats">
+            <div>
+                <div class="uc-stat-val" id="uc-followers">0</div>
+                <div class="uc-stat-lbl">Seguidores</div>
+            </div>
+            <div>
+                <div class="uc-stat-val" id="uc-following">0</div>
+                <div class="uc-stat-lbl">Siguiendo</div>
+            </div>
+        </div>
+        <button id="uc-follow-btn" class="primary" style="width:100%">Seguir</button>
+    </div>
+
+    <script>
+        // --- CONSTANTES Y CONFIGURACIÓN ---
+        const DISCOVERY_RELAYS = ['wss://relay.damus.io', 'wss://relay.contextvm.org', 'wss://relay2.contextvm.org'];
+        const RELAY_PUBKEY = '1bdc9826c1c2537acc0c288fcf73af8f6638f7b3941a4f70414bc6929338d521';
+        const APP_ENTITY_NAME = 'document_row';
+        const APP_CONTEXT_NAME = 'main_archive';
+
+        const CANONICAL_FIELDS = [
+            { key: 'level_0', label: 'Nivel 0' },
+            { key: 'level_1', label: 'Nivel 1' },
+            { key: 'level_2', label: 'Nivel 2' },
+            { key: 'level_3', label: 'Nivel 3' },
+            { key: 'status', label: 'Estado' },
+            { key: 'context_owner', label: 'Proceso' }
+        ];
+
+        // --- ESTADO GLOBAL ---
+        const state = {
+            keys: { pubkey: null, privkey: null },
+            connected: false,
+            relayWsUrl: null,
+            relayHttpUrl: null,
+            ws: null,
+            scope: '',
+            ownerMode: 'persona',   // 'persona' or 'entidad'
+            entityName: '',         // company name when mode=entidad
+            contextOwnerName: '',   // resolved: persona=truncatedPubkey, entidad=entityName
+            records: [],
+            filters: {},
+            selectedIds: new Set(),
+            showSealed: false,
+            pendingRequests: new Map(),
+            hoverTimeout: null,
+            hoveredPubkey: null,
+            socialGraph: []
+        };
+
+        // --- UTILIDADES ---
+        const getHex = (s) => (s && s.startsWith('did:key:')) ? s.split(':')[2] : s?.replace(/[^0-9a-fA-F]/g, '');
+
+        function truncatePubkey(pk) {
+            if (!pk) return '';
+            try {
+                const npub = window.NostrTools.nip19.npubEncode(getHex(pk));
+                return `${npub.substring(0, 9)}...${npub.substring(npub.length - 4)}`;
+            } catch (e) { return pk.substring(0, 8) + '...'; }
+        }
+
+        function getAvatarUrl(pubkeyHex) {
+            const clean = getHex(pubkeyHex) || 'default';
+            return `https://api.dicebear.com/7.x/identicon/svg?seed=${clean}&backgroundColor=f1f5f9`;
+        }
+
+        function toast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.innerHTML = msg;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => el.remove(), 300);
+            }, 3000);
+        }
+
+        function logConsole(msg) {
+            const cons = document.getElementById('relay-console');
+            const entry = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            entry.innerText = `[${time}] ${msg}`;
+            cons.appendChild(entry);
+            cons.scrollTop = cons.scrollHeight;
+        }
+
+        function initScope() {
+            let s = localStorage.getItem('mobi_scope');
+            if (!s) {
+                s = Math.random().toString(36).substring(2, 8).toUpperCase();
+                localStorage.setItem('mobi_scope', s);
+            }
+            state.scope = s;
+            document.getElementById('scope-display').innerText = s;
+            document.getElementById('settings-scope').value = s;
+
+            // Restore saved entity name — persists across sessions
+            const savedMode = localStorage.getItem('owner_mode') || 'entidad';
+            const savedEntity = localStorage.getItem('entity_name') || 'Puerto Negro';
+            state.ownerMode = savedMode;
+            state.entityName = savedEntity;
+            document.getElementById('owner-mode').value = savedMode;
+            if (savedMode === 'entidad' && savedEntity) {
+                document.getElementById('entity-name-input').style.display = 'inline-block';
+                document.getElementById('entity-name-input').value = savedEntity;
+            }
+            // contextOwnerName will be fully resolved in enterApp after pubkey is known
+        }
+
+        function changeOwnerMode(mode) {
+            state.ownerMode = mode;
+            localStorage.setItem('owner_mode', mode);
+            const inp = document.getElementById('entity-name-input');
+            if (mode === 'entidad') {
+                inp.style.display = 'inline-block';
+                inp.focus();
+            } else {
+                inp.style.display = 'none';
+            }
+            updateContextOwnerName();
+        }
+
+        function updateEntityName(name) {
+            state.entityName = name;
+            localStorage.setItem('entity_name', name);
+            updateContextOwnerName();
+        }
+
+        function updateContextOwnerName() {
+            if (state.ownerMode === 'entidad' && state.entityName) {
+                state.contextOwnerName = state.entityName;
+            } else {
+                // In persona mode: use truncated pubkey if known, else 'Persona'
+                state.contextOwnerName = state.keys.pubkey ? truncatePubkey(state.keys.pubkey) : '';
+            }
+        }
+
+        function getRelayHTTPBase(wsUrl) {
+            if (!wsUrl) return '';
+            return wsUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+        }
+
+        // --- AUTENTICACIÓN ---
+        function checkAuth() {
+            initScope();
+            const storedPriv = localStorage.getItem('app_privkey');
+            const storedPub = localStorage.getItem('app_pubkey');
+
+            if (storedPriv && storedPub) {
+                state.keys = { privkey: storedPriv, pubkey: storedPub };
+                enterApp();
+            } else {
+                // Try to detect NIP-07 passively
+                setTimeout(() => {
+                    if (window.nostr) {
+                        // We don't auto-login via NIP07 to avoid annoying popups, user must click
+                    }
+                }, 500);
+            }
+        }
+
+        async function loginWithNIP07() {
+            if (!window.nostr) {
+                toast('No se detectó extensión Nostr. Instala Alby o usa Identidad Rápida.', 'error');
+                return;
+            }
+            try {
+                const pubkey = await window.nostr.getPublicKey();
+                state.keys = { pubkey: pubkey, privkey: null };
+                localStorage.setItem('app_pubkey', pubkey);
+                enterApp();
+            } catch (e) {
+                toast('Error al conectar billetera.', 'error');
+            }
+        }
+
+        function createIdentity() {
+            try {
+                const sk = window.NostrTools.generateSecretKey();
+                const pk = window.NostrTools.getPublicKey(sk);
+                const skHex = window.NostrTools.bytesToHex(sk);
+
+                state.keys = { privkey: skHex, pubkey: pk };
+                localStorage.setItem('app_privkey', skHex);
+                localStorage.setItem('app_pubkey', pk);
+
+                const nsec = window.NostrTools.nip19.nsecEncode(sk);
+                document.getElementById('backup-key-text').innerText = nsec;
+                document.getElementById('backup-alert').classList.remove('hidden');
+
+                enterApp();
+            } catch (e) {
+                console.error(e);
+                toast('Error generando claves locales.', 'error');
+            }
+        }
+
+        function copyBackupKey() {
+            const txt = document.getElementById('backup-key-text').innerText;
+            navigator.clipboard.writeText(txt);
+            toast('Clave copiada al portapapeles');
+        }
+
+        function enterApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+
+            const cleanHex = getHex(state.keys.pubkey);
+            document.getElementById('user-npub').innerText = truncatePubkey(cleanHex);
+            document.getElementById('user-avatar').src = getAvatarUrl(cleanHex);
+
+            // Now that pubkey is known, recompute contextOwnerName
+            updateContextOwnerName();
+
+            discoverAndConnect();
+        }
+
+        // --- CONEXIÓN AL RELAY (DESCUBRIMIENTO) ---
+        async function discoverAndConnect() {
+            logConsole("Buscando relay anunciante...");
+            let found = false;
+
+            for (const url of DISCOVERY_RELAYS) {
+                if (found) break;
+                try {
+                    const tempWs = new WebSocket(url);
+                    await new Promise((resolve, reject) => {
+                        tempWs.onopen = () => {
+                            tempWs.send(JSON.stringify(["REQ", "sub1", { kinds: [11316], authors: [RELAY_PUBKEY], limit: 1 }]));
+                        };
+                        tempWs.onmessage = (e) => {
+                            const data = JSON.parse(e.data);
+                            if (data[0] === "EVENT") {
+                                const event = data[2];
+                                const relayTag = event.tags.find(t => t[0] === 'r');
+                                if (relayTag) {
+                                    connectToRelay(relayTag[1]);
+                                    found = true;
+                                    tempWs.close();
+                                    resolve();
+                                }
+                            } else if (data[0] === "EOSE") {
+                                tempWs.close();
+                                resolve();
+                            }
+                        };
+                        tempWs.onerror = () => { tempWs.close(); resolve(); };
+                        setTimeout(() => { tempWs.close(); resolve(); }, 3000);
+                    });
+                } catch (e) { continue; }
+            }
+
+            if (!found) {
+                logConsole("Discovery falló. Intentando fallback local...");
+                connectToRelay('ws://localhost:3334');
+            }
+        }
+
+        function connectToRelay(url) {
+            if (state.ws) state.ws.close();
+
+            state.relayWsUrl = url;
+            state.relayHttpUrl = getRelayHTTPBase(url);
+            logConsole(`Conectando a: ${url}`);
+
+            state.ws = new WebSocket(url);
+
+            state.ws.onopen = () => {
+                state.connected = true;
+                document.getElementById('status-dot').classList.add('connected');
+                document.getElementById('status-text').innerText = 'Conectado';
+                logConsole("WebSocket Abierto.");
+
+                // Suscribirse a las tablas y consensos para actualizaciones en tiempo real
+                state.ws.send(JSON.stringify(["REQ", "app_sub",
+                    { kinds: [25910, 25911] }
+                ]));
+
+                // Carga inicial vía REST
+                fetchInitialData();
+            };
+
+            state.ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+
+                // Manejar respuestas MCP / EVENT
+                if (data[0] === "EVENT") {
+                    const event = data[2];
+
+                    // Si el relay responde con JSON directo en el contenido (MCP RPC Response)
+                    try {
+                        const content = JSON.parse(event.content);
+                        // Only resolve if this is a RESPONSE (has result/error), NOT an echoed REQUEST (has method)
+                        if (content.id && !content.method && state.pendingRequests.has(content.id)) {
+                            state.pendingRequests.get(content.id)(content);
+                            state.pendingRequests.delete(content.id);
+                        }
+                    } catch (err) { }
+
+                    // Si es una actualización de datos que otra persona hizo (requiere recargar o parsear)
+                    // Para simplificar: recargamos la tabla cada vez que llega un evento del app si no fuimos nosotros
+                    if (event.pubkey !== state.keys.pubkey) {
+                        setTimeout(fetchInitialData, 1000);
+                    }
+                }
+
+                // Si el relay responde con OK o JSON directo fuera del estándar EVENT
+                if (data.id && state.pendingRequests.has(data.id)) {
+                    state.pendingRequests.get(data.id)(data);
+                    state.pendingRequests.delete(data.id);
+                }
+
+                if (data[0] === "OK") {
+                    logConsole(`Evento aceptado: ${data[1]}`);
+                }
+            };
+
+            state.ws.onclose = () => {
+                state.connected = false;
+                document.getElementById('status-dot').classList.remove('connected');
+                document.getElementById('status-text').innerText = 'Reconectando...';
+                logConsole("WebSocket Cerrado. Reconectando en 5s...");
+                setTimeout(() => connectToRelay(url), 5000);
+            };
+        }
+
+        // --- ENVÍO DE EVENTOS MCP (Firma Segura) ---
+        async function sendMCPRequest(request) {
+            return new Promise(async (resolve, reject) => {
+                if (!state.connected || !state.ws) {
+                    reject(new Error("No conectado al relay"));
+                    return;
+                }
+
+                state.pendingRequests.set(request.id, resolve);
+
+                const event = {
+                    kind: 25910,
+                    pubkey: getHex(state.keys.pubkey),
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [["p", RELAY_PUBKEY]],
+                    content: JSON.stringify(request)
+                };
+
+                try {
+                    let signedEvent;
+                    if (state.keys.privkey) {
+                        const cleanSk = getHex(state.keys.privkey);
+                        const skUint = new Uint8Array(cleanSk.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+                        signedEvent = window.NostrTools.finalizeEvent(event, skUint);
+                    } else if (window.nostr) {
+                        signedEvent = await window.nostr.signEvent(event);
+                    } else {
+                        throw new Error('No hay método de firma disponible');
+                    }
+
+                    state.ws.send(JSON.stringify(["EVENT", signedEvent]));
+                    logConsole(`MCP Enviado: ${request.params.name}`);
+
+                    // Fallback timeout por si el relay no responde
+                    setTimeout(() => {
+                        if (state.pendingRequests.has(request.id)) {
+                            resolve({ fallback: true, message: "Timeout esperando respuesta estructurada" });
+                            state.pendingRequests.delete(request.id);
+                        }
+                    }, 8000);
+
+                } catch (e) {
+                    console.error('Error al firmar:', e);
+                    toast('Error al firmar: ' + e.message, 'error');
+                    state.pendingRequests.delete(request.id);
+                    reject(e);
+                }
+            });
+        }
+
+        // --- OBTENER DATOS (REST) ---
+        async function fetchInitialData() {
+            if (!state.relayHttpUrl) return;
+            try {
+                const url = `${state.relayHttpUrl}/api/aarpia/instances?domain=${state.scope}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Error HTTP " + res.status);
+                const data = await res.json();
+
+                // Filtrar por nuestro contexto y entidad
+                const myDocs = data.filter(i => i.context_name === APP_CONTEXT_NAME && i.entity_name === APP_ENTITY_NAME);
+
+                // Obtener datos sociales para hover cards
+                const social = data.filter(i => i.entity_name === 'follower_consensus');
+                state.socialGraph = social;
+
+                processData(myDocs);
+            } catch (e) {
+                console.error("Error fetching data:", e);
+                logConsole("Error REST: " + e.message);
+            }
+        }
+
+        function processData(instances) {
+            const parsed = [];
+
+            instances.forEach(inst => {
+                // Merge all DATA_ENTRY actions to get latest field values
+                let rowData = {};
+                const allEntries = inst.actions_log ? inst.actions_log.filter(a => a.type === 'DATA_ENTRY') : [];
+                allEntries.forEach(entry => {
+                    try {
+                        const d = JSON.parse(entry.verb);
+                        // If it's a single-field edit (has 'field' key), apply it
+                        if (d.field && d.new_value !== undefined) {
+                            rowData[d.field] = d.new_value;
+                        } else {
+                            // Bulk data (initial creation or import)
+                            Object.assign(rowData, d);
+                        }
+                    } catch (e) {
+                        // Not JSON, skip
+                    }
+                });
+
+                parsed.push({
+                    id: inst.instance_hash,
+                    state: inst.current_state,
+                    date: inst.actions_log && inst.actions_log[0] ? new Date(inst.actions_log[0].timestamp * 1000) : new Date(),
+                    owner: inst.owner_did,
+                    data: rowData,
+                    sealed: inst.sealed || false,
+                    actions_log: inst.actions_log || []
+                });
+            });
+
+            parsed.sort((a, b) => b.date - a.date);
+            state.records = parsed;
+            renderTable();
+        }
+
+        // --- RENDERIZADO DE INTERFAZ ---
+        function renderTable() {
+            const thead = document.getElementById('table-head');
+            const tbody = document.getElementById('table-body');
+            const emptyState = document.getElementById('empty-state');
+            const table = document.getElementById('data-table');
+
+            if (state.records.length === 0) {
+                table.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                table.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+            }
+
+            // Cabeceras fijas con checkbox
+            let headHTML = '<tr><th style="width:30px;"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)"></th><th>CREADOR</th>';
+            CANONICAL_FIELDS.forEach(f => { headHTML += `<th>${f.label.toUpperCase()}</th>`; });
+            headHTML += '<th>FECHA</th><th></th></tr>';
+
+            // Fila de filtros
+            headHTML += '<tr class="filter-row"><th></th><th></th>';
+            CANONICAL_FIELDS.forEach(f => {
+                if (f.key === 'status') {
+                    const vals = [...new Set(state.records.map(r => r.data.status || r.state).filter(Boolean))];
+                    headHTML += `<th><select class="filter-input" data-filter="${f.key}" onchange="applyFilters()"><option value="">Todos</option>${vals.map(v => `<option value="${v}" ${state.filters[f.key] === v ? 'selected' : ''}>${v}</option>`).join('')}</select></th>`;
+                } else {
+                    headHTML += `<th><input class="filter-input" data-filter="${f.key}" placeholder="Filtrar..." value="${state.filters[f.key] || ''}" oninput="applyFilters()"></th>`;
+                }
+            });
+            headHTML += '<th></th><th></th></tr>';
+            thead.innerHTML = headHTML;
+
+            // Filtrado global + por columna + sealed
+            const globalSearch = (document.getElementById('search-input')?.value || '').toLowerCase();
+            const filtered = state.records.filter(rec => {
+                // Hide sealed unless toggled
+                if (rec.sealed && !state.showSealed) return false;
+                // Filtro global
+                if (globalSearch) {
+                    const text = JSON.stringify(rec.data).toLowerCase() + rec.state.toLowerCase();
+                    if (!text.includes(globalSearch)) return false;
+                }
+                // Filtros por columna
+                for (const f of CANONICAL_FIELDS) {
+                    const fv = state.filters[f.key];
+                    if (!fv) continue;
+                    const val = String(f.key === 'status' ? (rec.data.status || rec.state) : (rec.data[f.key] || '')).toLowerCase();
+                    if (f.key === 'status') {
+                        if (val !== fv.toLowerCase()) return false;
+                    } else {
+                        if (!val.includes(fv.toLowerCase())) return false;
+                    }
+                }
+                return true;
+            });
+
+            tbody.innerHTML = '';
+            const formatter = new Intl.DateTimeFormat('es-ES', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+            filtered.forEach(rec => {
+                const tr = document.createElement('tr');
+                if (rec.sealed) tr.style.opacity = '0.45';
+
+                // Celda Checkbox
+                const tdCb = document.createElement('td');
+                if (!rec.sealed) {
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = state.selectedIds.has(rec.id);
+                    cb.onchange = () => toggleSelect(rec.id, cb.checked);
+                    tdCb.appendChild(cb);
+                }
+                tr.appendChild(tdCb);
+
+                // Celda Creador
+                const tdAvatar = document.createElement('td');
+                const avatarImg = document.createElement('img');
+                avatarImg.className = 'avatar';
+                avatarImg.src = getAvatarUrl(rec.owner);
+                avatarImg.dataset.pubkey = getHex(rec.owner);
+                avatarImg.onmouseenter = (e) => showHoverCard(e, getHex(rec.owner));
+                avatarImg.onmouseleave = () => hideHoverCardWithDelay();
+                tdAvatar.appendChild(avatarImg);
+                tr.appendChild(tdAvatar);
+
+                // Celdas canónicas editables (not if sealed)
+                CANONICAL_FIELDS.forEach(f => {
+                    const td = document.createElement('td');
+                    const val = f.key === 'status' ? (rec.data.status || rec.state) : (rec.data[f.key] || '');
+                    td.innerText = val || '---';
+                    if (!rec.sealed) {
+                        td.className = 'editable';
+                        td.dataset.field = f.key;
+                        td.dataset.recordId = rec.id;
+                        td.dataset.currentValue = val;
+                        td.onclick = () => startEdit(td, rec, f.key);
+                    }
+                    tr.appendChild(td);
+                });
+
+                // Celda Fecha
+                const tdDate = document.createElement('td');
+                tdDate.innerText = formatter.format(rec.date);
+                tr.appendChild(tdDate);
+
+                // Celda Acciones
+                const tdActions = document.createElement('td');
+                tdActions.innerHTML = `<button class="btn-history" title="Ver historial" onclick="showRecordHistory('${rec.id}')">📜</button>`;
+                tr.appendChild(tdActions);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            renderTable();
+        }
+
+        function applyFilters() {
+            document.querySelectorAll('.filter-input').forEach(el => {
+                state.filters[el.dataset.filter] = el.value;
+            });
+            renderTable();
+        }
+
+        function clearAllFilters() {
+            state.filters = {};
+            document.getElementById('search-input').value = '';
+            renderTable();
+        }
+
+        function toggleSealed(checked) {
+            state.showSealed = checked;
+            renderTable();
+        }
+
+        // --- SELECCIÓN MÚLTIPLE ---
+        function toggleSelectAll(checked) {
+            state.selectedIds.clear();
+            if (checked) {
+                state.records.forEach(r => { if (!r.sealed) state.selectedIds.add(r.id); });
+            }
+            updateSelectionBar();
+            renderTable();
+        }
+
+        function toggleSelect(id, checked) {
+            if (checked) state.selectedIds.add(id); else state.selectedIds.delete(id);
+            updateSelectionBar();
+        }
+
+        function updateSelectionBar() {
+            const bar = document.getElementById('selection-bar');
+            const count = state.selectedIds.size;
+            if (count > 0) {
+                bar.classList.remove('hidden');
+                bar.style.display = 'flex';
+                document.getElementById('selection-count').innerText = `${count} seleccionado${count > 1 ? 's' : ''}`;
+            } else {
+                bar.classList.add('hidden');
+                bar.style.display = 'none';
+            }
+        }
+
+        async function deleteSelected() {
+            const ids = [...state.selectedIds];
+            if (ids.length === 0) return;
+            if (!confirm(`¿Eliminar ${ids.length} registro(s)? Se lacrarán con estado "eliminado".`)) return;
+
+            try {
+                const req = {
+                    jsonrpc: "2.0", method: "tools/call", id: Date.now().toString(),
+                    params: {
+                        name: "aarpia_seal_batch",
+                        arguments: { instance_hashes: ids, seal_state: "eliminado" }
+                    }
+                };
+                await sendMCPRequest(req);
+                toast(`${ids.length} registro(s) eliminado(s)`);
+                state.selectedIds.clear();
+                updateSelectionBar();
+                setTimeout(fetchInitialData, 1500);
+            } catch (e) {
+                toast('Error al eliminar', 'error');
+            }
+        }
+
+        // --- EDICIÓN INLINE (SEAL & CLONE) ---
+        function startEdit(td, rec, fieldKey) {
+            if (td.querySelector('.edit-input')) return;
+            const current = td.dataset.currentValue || '';
+            const inp = document.createElement('input');
+            inp.className = 'edit-input';
+            inp.value = current;
+            td.innerText = '';
+            td.appendChild(inp);
+            inp.focus();
+            inp.select();
+
+            const finish = () => saveEdit(td, rec, fieldKey, current, inp.value.trim());
+            inp.addEventListener('keydown', e => { if (e.key === 'Enter') finish(); if (e.key === 'Escape') { td.innerText = current || '---'; td.dataset.currentValue = current; } });
+            inp.addEventListener('blur', finish);
+        }
+
+        async function saveEdit(td, rec, fieldKey, oldValue, newValue) {
+            if (newValue === oldValue) {
+                td.innerText = oldValue || '---';
+                return;
+            }
+
+            // Determine action type:
+            // VALIDACIÓN = status change (seal_state = new status)
+            // TRANSDUCCIÓN = data edit (seal_state = "documento_editado")
+            const isValidacion = (fieldKey === 'status');
+            const sealState = isValidacion ? newValue : 'documento_editado';
+
+            // Build the full new data payload (merge old data + edited field)
+            const newData = { ...rec.data };
+            newData[fieldKey] = newValue;
+            newData._action_type = isValidacion ? 'VALIDACION' : 'TRANSDUCCION';
+            newData._action_field = fieldKey;
+
+            td.innerText = newValue || '---';
+            td.dataset.currentValue = newValue;
+
+            try {
+                const req = {
+                    jsonrpc: "2.0", method: "tools/call", id: Date.now().toString(),
+                    params: {
+                        name: "aarpia_seal_and_clone",
+                        arguments: {
+                            instance_hash: rec.id,
+                            seal_state: sealState,
+                            new_data: JSON.stringify(newData),
+                            domain: state.scope
+                        }
+                    }
+                };
+                await sendMCPRequest(req);
+                toast(isValidacion ? `Validación: estado → ${newValue}` : `Transducción: ${fieldKey} actualizado`);
+                setTimeout(fetchInitialData, 1500);
+            } catch (e) {
+                toast('Error al editar', 'error');
+                td.innerText = oldValue || '---';
+                td.dataset.currentValue = oldValue;
+            }
+        }
+
+        // --- HISTORIAL DE CAMBIOS ---
+        function showRecordHistory(recordId) {
+            const rec = state.records.find(r => r.id === recordId);
+            if (!rec) return;
+
+            const body = document.getElementById('history-body');
+            const log = rec.actions_log || [];
+
+            if (log.length === 0) {
+                body.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Sin historial para este registro.</p>';
+            } else {
+                const fmtTime = ts => ts ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(ts * 1000)) : '—';
+                body.innerHTML = '<div class="history-timeline">' + log.map(a => {
+                    const isSC = a.type === 'STATE_CHANGE';
+                    let detail = a.verb;
+                    try {
+                        const d = JSON.parse(a.verb);
+                        if (d.field) {
+                            detail = `<strong>${d.field}</strong>: <span class="he-old">${d.old_value || '(vacío)'}</span> → <span class="he-new">${d.new_value}</span>`;
+                        }
+                    } catch (e) { }
+                    return `<div class="history-entry ${isSC ? 'state-change' : 'data-entry'}">
+                        <span class="he-time">${fmtTime(a.timestamp)}</span>
+                        <span class="he-badge ${isSC ? 'sc' : 'de'}">${isSC ? 'ESTADO' : 'DATO'}</span>
+                        <span class="he-detail">${detail}</span>
+                    </div>`;
+                }).join('') + '</div>';
+            }
+
+            document.getElementById('modal-history').classList.add('active');
+        }
+
+        // --- CREACIÓN E IMPORTACIÓN ---
+        function openNewRowModal() {
+            const container = document.getElementById('dynamic-form-container');
+            container.innerHTML = '';
+
+            CANONICAL_FIELDS.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                if (f.key === 'status') {
+                    div.innerHTML = `<label>${f.label}</label>
+                        <select data-key="${f.key}" class="filter-input" style="font-size:0.9rem; padding:8px;">
+                            <option value="activo">Activo</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="revisado">Revisado</option>
+                            <option value="completado">Completado</option>
+                            <option value="archivado">Archivado</option>
+                        </select>`;
+                } else if (f.key === 'context_owner') {
+                    div.innerHTML = `<label>${f.label}</label>
+                        <input type="text" data-key="${f.key}" value="${state.contextOwnerName || 'Puerto Negro'}" style="background:#f1f5f9;">`;
+                } else {
+                    div.innerHTML = `<label>${f.label}</label>
+                        <input type="text" data-key="${f.key}">`;
+                }
+                container.appendChild(div);
+            });
+
+            document.getElementById('modal-new-row').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        async function submitNewRow() {
+            const container = document.getElementById('dynamic-form-container');
+            const inputs = container.querySelectorAll('[data-key]');
+            let data = {};
+            inputs.forEach(inp => {
+                if (inp.value.trim() !== '') data[inp.dataset.key] = inp.value;
+            });
+
+            if (Object.keys(data).length === 0) {
+                return toast('Por favor, rellena al menos un campo', 'warning');
+            }
+
+            const btn = document.getElementById('btn-submit-row');
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
+
+            try {
+                await createRecordInBackend(data);
+                toast('Registro creado exitosamente');
+                closeModal('modal-new-row');
+                setTimeout(fetchInitialData, 1500); // Recargar
+            } catch (e) {
+                toast('Error al crear registro', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Guardar Registro';
+            }
+        }
+
+        async function createRecordInBackend(rowData) {
+            // Always force context_owner from the session entity (overrides CSV column)
+            // If empty (init failure), fallback to 'Puerto Negro' as explicitly requested
+            rowData.context_owner = state.contextOwnerName || 'Puerto Negro';
+            const createReq = {
+                jsonrpc: "2.0", method: "tools/call", id: Date.now().toString(),
+                params: {
+                    name: "aarpia_create_instance",
+                    arguments: {
+                        entity_name: APP_ENTITY_NAME,
+                        context_name: APP_CONTEXT_NAME,
+                        start_state: "activo",
+                        target_state: "archivado",
+                        domain: state.scope,
+                        initial_data: JSON.stringify(rowData)
+                    }
+                }
+            };
+            await sendMCPRequest(createReq);
+        }
+
+        // --- IMPORTAR CSV ---
+        function handleCSVFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('modal-csv-progress').classList.add('active');
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: async function (results) {
+                    const rows = results.data;
+                    const total = rows.length;
+                    const progressText = document.getElementById('csv-progress-text');
+                    const progressFill = document.getElementById('csv-progress-fill');
+
+                    let successCount = 0;
+                    for (let i = 0; i < total; i++) {
+                        progressText.innerText = `Procesando fila ${i + 1} de ${total}...`;
+                        progressFill.style.width = `${((i) / total) * 100}%`;
+
+                        try {
+                            // Normalize CSV column names to canonical keys
+                            // e.g. "Context Owner" → "context_owner", "Level 0" → "level_0"
+                            const normalized = {};
+                            for (const [k, v] of Object.entries(rows[i])) {
+                                const key = k.trim().toLowerCase().replace(/\s+/g, '_');
+                                normalized[key] = v;
+                            }
+                            await createRecordInBackend(normalized);
+                            successCount++;
+                        } catch (e) { console.error("Error fila", i, e); }
+
+                        // Pequeño delay para no saturar el websocket
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+
+                    progressFill.style.width = `100%`;
+                    progressText.innerText = `¡Completado! ${successCount} filas importadas.`;
+
+                    setTimeout(() => {
+                        closeModal('modal-csv-progress');
+                        document.getElementById('csv-file-input').value = '';
+                        fetchInitialData();
+                    }, 2000);
+                }
+            });
+        }
+
+        // --- EXPORTAR CSV ---
+        function exportCSV() {
+            if (state.records.length === 0) return toast('No hay datos para exportar', 'warning');
+
+            const csvRows = [];
+            // Header
+            csvRows.push(['ID', ...CANONICAL_FIELDS.map(f => f.label), 'Fecha', 'Creador'].join(','));
+
+            // Filas
+            state.records.forEach(rec => {
+                const row = [
+                    `"${rec.id}"`,
+                    ...CANONICAL_FIELDS.map(f => {
+                        let val = f.key === 'status' ? (rec.data.status || rec.state) : (rec.data[f.key] || '');
+                        val = String(val).replace(/"/g, '""');
+                        return `"${val}"`;
+                    }),
+                    `"${rec.date.toISOString()}"`,
+                    `"${rec.owner || ''}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `documentos_${state.scope}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast('CSV exportado');
+        }
+
+        // --- EXPORTAR JSON ---
+        function exportJSON() {
+            if (state.records.length === 0) return toast('No hay datos para exportar', 'warning');
+
+            const exportData = {
+                exported_at: new Date().toISOString(),
+                scope: state.scope,
+                fields: CANONICAL_FIELDS.map(f => f.key),
+                records: state.records.map(rec => {
+                    const row = { id: rec.id, date: rec.date.toISOString(), owner: rec.owner };
+                    CANONICAL_FIELDS.forEach(f => {
+                        row[f.key] = f.key === 'status' ? (rec.data.status || rec.state) : (rec.data[f.key] || '');
+                    });
+                    return row;
+                })
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `documentos_${state.scope}.json`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast('JSON exportado');
+        }
+
+        // --- AJUSTES Y SCOPE ---
+        function openSettings() {
+            document.getElementById('modal-settings').classList.add('active');
+        }
+
+        function saveScope() {
+            const newScope = document.getElementById('settings-scope').value.trim();
+            if (!newScope) return;
+            localStorage.setItem('mobi_scope', newScope);
+            state.scope = newScope;
+            document.getElementById('scope-display').innerText = newScope;
+            toast('Espacio de trabajo cambiado');
+            closeModal('modal-settings');
+            fetchInitialData();
+        }
+
+        // --- HOVER CARD (CONSENSO DE SEGUIDORES) ---
+        function showHoverCard(event, targetPubkeyHex) {
+            clearCardTimeout();
+            state.hoveredPubkey = targetPubkeyHex;
+
+            const card = document.getElementById('user-card');
+            const rect = event.target.getBoundingClientRect();
+
+            card.style.top = `${rect.bottom + window.scrollY + 10}px`;
+            card.style.left = `${rect.left + window.scrollX - 100}px`;
+
+            document.getElementById('uc-avatar').src = getAvatarUrl(targetPubkeyHex);
+            document.getElementById('uc-npub').innerText = truncatePubkey(targetPubkeyHex);
+
+            calculateFollowStats(targetPubkeyHex);
+
+            const btn = document.getElementById('uc-follow-btn');
+            if (targetPubkeyHex === getHex(state.keys.pubkey)) {
+                btn.style.display = 'none';
+            } else {
+                btn.style.display = 'block';
+                // Check if currently following
+                const amIFollowing = checkAmIFollowing(targetPubkeyHex);
+                btn.innerText = amIFollowing ? 'Dejar de Seguir' : 'Seguir';
+                btn.onclick = () => toggleFollow(targetPubkeyHex, !amIFollowing);
+            }
+
+            card.classList.add('visible');
+        }
+
+        function hideHoverCardWithDelay() {
+            state.hoverTimeout = setTimeout(() => {
+                document.getElementById('user-card').classList.remove('visible');
+            }, 100);
+        }
+
+        function clearCardTimeout() {
+            if (state.hoverTimeout) clearTimeout(state.hoverTimeout);
+        }
+
+        function calculateFollowStats(targetPk) {
+            // Lógica basada en instancias con entity_name === 'follower_consensus'
+            let followers = 0;
+            let following = 0;
+
+            if (!state.socialGraph) return;
+
+            // Seguidores del target (context_name === targetPk)
+            const targetInstance = state.socialGraph.find(i => i.context_name === targetPk);
+            if (targetInstance && targetInstance.actions_log) {
+                const states = {};
+                targetInstance.actions_log.forEach(act => {
+                    if (act.type === 'FOLLOW' || act.type === 'UNFOLLOW') {
+                        states[act.sender] = act.type;
+                    }
+                });
+                followers = Object.values(states).filter(v => v === 'FOLLOW').length;
+            }
+
+            // A quién sigue el target (buscar en todas las instancias donde el sender sea targetPk)
+            state.socialGraph.forEach(inst => {
+                if (inst.actions_log) {
+                    let lastAction = null;
+                    inst.actions_log.forEach(act => {
+                        if (act.sender === targetPk && (act.type === 'FOLLOW' || act.type === 'UNFOLLOW')) {
+                            lastAction = act.type;
+                        }
+                    });
+                    if (lastAction === 'FOLLOW') following++;
+                }
+            });
+
+            document.getElementById('uc-followers').innerText = followers;
+            document.getElementById('uc-following').innerText = following;
+        }
+
+        function checkAmIFollowing(targetPk) {
+            const myPk = getHex(state.keys.pubkey);
+            if (!state.socialGraph) return false;
+            const targetInstance = state.socialGraph.find(i => i.context_name === targetPk);
+            if (!targetInstance || !targetInstance.actions_log) return false;
+
+            let lastAction = null;
+            targetInstance.actions_log.forEach(act => {
+                if (act.sender === myPk && (act.type === 'FOLLOW' || act.type === 'UNFOLLOW')) {
+                    lastAction = act.type;
+                }
+            });
+            return lastAction === 'FOLLOW';
+        }
+
+        async function toggleFollow(targetPk, willFollow) {
+            // El consenso requiere enviar una transición a la instancia follower_consensus del target
+            // Por simplicidad en la UI y el protocolo, enviamos MCP para que el backend lo gestione.
+            // Si la instancia no existe, el relay Aarpia debería crearla bajo demanda o nosotros lo hacemos.
+
+            const btn = document.getElementById('uc-follow-btn');
+            btn.disabled = true;
+            btn.innerText = 'Procesando...';
+
+            const req = {
+                jsonrpc: "2.0", method: "tools/call", id: Date.now().toString(),
+                params: {
+                    name: "aarpia_transition",
+                    arguments: {
+                        // Aquí el backend determina el instance hash basado en el contrato de consenso
+                        // Simulamos el envío para la UX de la demostración productiva
+                        action_verb: willFollow ? "SEGUIR" : "DEJAR_DE_SEGUIR",
+                        action_type: willFollow ? "FOLLOW" : "UNFOLLOW",
+                        domain: state.scope,
+                        target_pubkey: targetPk // Propiedad extendida para el contrato social
+                    }
+                }
+            };
+
+            try {
+                await sendMCPRequest(req);
+                toast(willFollow ? 'Siguiendo usuario' : 'Dejaste de seguir');
+                // Optimistic UI
+                btn.innerText = willFollow ? 'Dejar de Seguir' : 'Seguir';
+                btn.onclick = () => toggleFollow(targetPk, !willFollow);
+                setTimeout(fetchInitialData, 1500); // recargar grafo
+            } catch (e) {
+                toast('Error en la red social', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // --- ARRANQUE ---
+        window.onload = checkAuth;
+
+    </script>
+</body>
+
+</html>
