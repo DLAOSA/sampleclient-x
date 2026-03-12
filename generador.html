@@ -4,96 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador & Visualizador AARPIA</title>
-    <script src="https://js.puter.com/v2/"></script>
     <style>
         :root {
-            --sidebar-bg: #202123;
-            --sidebar-hover: #2a2b32;
-            --main-bg: #343541;
-            --panel-bg: #444654;
-            --text-main: #ececf1;
-            --text-muted: #8e8ea0;
-            --primary: #10a37f;
-            --primary-hover: #1a7f64;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --info: #06b6d4;
-            --info-hover: #0891b2;
+            --sidebar-bg: #202123; --sidebar-hover: #2a2b32; --main-bg: #343541;
+            --panel-bg: #444654; --text-main: #ececf1; --text-muted: #8e8ea0;
+            --primary: #10a37f; --primary-hover: #1a7f64; --accent: #3b82f6;
+            --accent-hover: #2563eb; --info: #06b6d4; --info-hover: #0891b2;
             --border: #4d4d4f;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-
-        body {
-            display: flex; height: 100vh; background-color: var(--main-bg);
-            color: var(--text-main); overflow: hidden;
-        }
+        body { display: flex; height: 100vh; background-color: var(--main-bg); color: var(--text-main); overflow: hidden; }
 
         /* Sidebar */
-        .sidebar {
-            width: 300px; background-color: var(--sidebar-bg); display: flex;
-            flex-direction: column; padding: 0.5rem; border-right: 1px solid var(--border); flex-shrink: 0;
-        }
-
-        .new-chat-btn {
-            background-color: transparent; border: 1px solid var(--border);
-            color: var(--text-main); padding: 0.75rem; border-radius: 6px;
-            text-align: left; cursor: pointer; display: flex; align-items: center;
-            gap: 10px; transition: background 0.2s; margin-bottom: 1rem; font-size: 0.9rem;
-        }
+        .sidebar { width: 300px; background-color: var(--sidebar-bg); display: flex; flex-direction: column; padding: 0.5rem; border-right: 1px solid var(--border); flex-shrink: 0; }
+        .new-chat-btn { background-color: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 0.75rem; border-radius: 6px; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; margin-bottom: 1rem; font-size: 0.9rem; }
         .new-chat-btn:hover { background-color: var(--sidebar-hover); }
 
-        .history-list {
-            flex-grow: 1; overflow-y: auto; list-style: none;
-            display: flex; flex-direction: column; gap: 0.25rem;
-        }
+        .history-list { flex-grow: 1; overflow-y: auto; list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
         .history-list::-webkit-scrollbar { width: 5px; }
         .history-list::-webkit-scrollbar-thumb { background: #555; border-radius: 5px; }
 
-        .history-item {
-            padding: 0.75rem; border-radius: 6px; cursor: pointer;
-            color: var(--text-main); font-size: 0.85rem; display: flex; flex-direction: column;
-            gap: 4px; transition: background 0.2s; position: relative;
-        }
+        .history-item { padding: 0.75rem; border-radius: 6px; cursor: pointer; color: var(--text-main); font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s; position: relative; }
         .history-item:hover, .history-item.active { background-color: var(--sidebar-hover); }
         
         .item-top { display: flex; align-items: center; gap: 8px; width: 100%; }
         .item-top svg.icon-msg { flex-shrink: 0; width: 16px; height: 16px; fill: currentColor; }
         .item-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
         .item-link { font-size: 0.75rem; color: var(--info); display: flex; align-items: center; gap: 4px; text-decoration: none;}
         .item-link:hover { text-decoration: underline; }
 
         .actions-wrapper { position: absolute; right: 5px; top: 10px; display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; background: var(--sidebar-hover); padding-left: 5px;}
         .history-item:hover .actions-wrapper, .history-item.active .actions-wrapper { opacity: 1; }
 
-        .icon-btn {
-            background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            width: 24px; height: 24px; border-radius: 4px;
-        }
+        .icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 4px; }
         .icon-btn:hover { background: rgba(255,255,255,0.1); }
         .play-btn { color: #10b981; }
         .del-btn { color: var(--text-muted); }
         .del-btn:hover { color: #ef4444; }
 
         /* Main Content */
-        .main-content {
-            flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem;
-        }
-
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem; }
         .container { max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 4rem; }
 
         h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #fff; display: flex; align-items: center; gap: 10px; }
         p.subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem; }
-
         label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main); font-size: 0.95rem; }
 
-        textarea {
-            width: 100%; background: var(--panel-bg); border: 1px solid var(--border);
-            color: var(--text-main); border-radius: 6px; padding: 1rem;
-            font-size: 0.95rem; resize: vertical; margin-bottom: 1rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
+        textarea { width: 100%; background: var(--panel-bg); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; padding: 1rem; font-size: 0.95rem; resize: vertical; margin-bottom: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         textarea:focus { outline: none; border-color: var(--primary); }
 
         #userInput { min-height: 120px; }
@@ -102,32 +60,20 @@
 
         .btn-group { display: flex; gap: 10px; margin-bottom: 2rem; flex-wrap: wrap; }
 
-        button.primary-btn {
-            background: var(--primary); color: white; border: none;
-            padding: 0.85rem 1.5rem; border-radius: 6px; font-weight: 600;
-            font-size: 1rem; cursor: pointer; transition: background 0.2s;
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1;
-            white-space: nowrap;
-        }
+        button.primary-btn { background: var(--primary); color: white; border: none; padding: 0.85rem 1.5rem; border-radius: 6px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; white-space: nowrap; }
         button.primary-btn:hover { background: var(--primary-hover); }
         button.primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         
         button.accent-btn { background: var(--accent); }
         button.accent-btn:hover { background: var(--accent-hover); }
-
         button.info-btn { background: var(--info); }
         button.info-btn:hover { background: var(--info-hover); }
 
         .divider { height: 1px; background: var(--border); margin: 2rem 0; }
 
         /* Toast */
-        .toast {
-            position: fixed; bottom: -50px; right: 20px; background: var(--primary);
-            color: white; padding: 1rem 1.5rem; border-radius: 6px; font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: bottom 0.3s ease-in-out; z-index: 1000;
-        }
+        .toast { position: fixed; bottom: -50px; right: 20px; background: var(--primary); color: white; padding: 1rem 1.5rem; border-radius: 6px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: bottom 0.3s ease-in-out; z-index: 1000; }
         .toast.show { bottom: 20px; }
-
     </style>
 </head>
 <body>
@@ -166,7 +112,7 @@
                     <button class="primary-btn accent-btn" onclick="saveAndPreviewHTML()">
                         ▶️ Previsualizar Local
                     </button>
-                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToPuter()">
+                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToMocky()">
                         🌐 Generar Link Público para Cliente
                     </button>
                 </div>
@@ -203,7 +149,6 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             if(history.length > 0) loadHistoryItem(history[0].id);
         });
 
-        /* --- 1. GENERAR Y PREVISUALIZAR --- */
         function generateAndCopy() {
             const inputEl = document.getElementById('userInput');
             const requestText = inputEl.value.trim();
@@ -243,41 +188,52 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             window.open(URL.createObjectURL(blob), '_blank');
         }
 
-        /* --- 2. HOSTING PÚBLICO CON PUTER.JS (CORREGIDO) --- */
-        async function publishToPuter() {
+        /* --- NUEVO HOSTING PÚBLICO CON MOCKY --- */
+        async function publishToMocky() {
             let htmlCode = document.getElementById('htmlInput').value.trim();
             if (!htmlCode) return alert("⚠️ Pega el código HTML primero antes de publicar.");
 
-            // Limpiamos etiquetas de markdown si la IA las puso
+            // Limpiamos etiquetas de markdown
             htmlCode = htmlCode.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
 
             const btn = document.getElementById('btnPublish');
             const originalText = btn.innerHTML;
-            btn.innerHTML = "⏳ Conectando servidor y publicando...";
+            btn.innerHTML = "⏳ Subiendo código y generando link...";
             btn.disabled = true;
 
             try {
-                // 1. Pedir login si no está conectado
-                if (!puter.auth.isSignedIn()) {
-                    await puter.auth.signIn();
+                // 1. Enviamos el código a Mocky
+                const respuesta = await fetch("https://designer.mocky.io/api/v3/mocks", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        status: 200,
+                        content_type: "text/html",
+                        charset: "UTF-8",
+                        content: htmlCode
+                    })
+                });
+
+                const datos = await respuesta.json();
+                
+                // 2. Extraemos el ID generado
+                const idMocky = datos.link.split('/').pop();
+
+                // 3. Calculamos la ruta de tu visor.html basándonos en dónde estás alojando este index
+                const currentPath = window.location.pathname;
+                const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                const urlBase = window.location.origin + dirPath;
+                
+                // Si abres esto como archivo local (file://), urlBase se rompe para enviar a un cliente, 
+                // por lo que advertimos si no está hosteado:
+                if (window.location.protocol === "file:") {
+                    alert("⚠️ Aviso: Estás usando este archivo en local. El link se generará, pero necesitas subir visor.html a internet para que el cliente lo pueda abrir.");
                 }
 
-                // 2. Crear nombres únicos seguros (solo texto alfanumérico)
-                const randomHash = Math.random().toString(36).substring(2, 10);
-                const dirName = "app" + randomHash;
-                const subName = "site" + randomHash;
+                // 4. Creamos la URL final para tu cliente
+                const finalUrl = `${urlBase}/visor.html?id=${idMocky}`;
 
-                // 3. Crear directorio en el cloud y escribir el HTML ahí
-                await puter.fs.mkdir(dirName);
-                await puter.fs.write(`${dirName}/index.html`, htmlCode);
-
-                // 4. Crear el hosting vinculando explícitamente el subdominio con la carpeta
-                const site = await puter.hosting.create(subName, dirName);
-
-                // 5. CONSTRUIR LA URL REAL (Aquí estaba el fallo, no es .url, es estructurarlo con .subdomain)
-                const finalUrl = `https://${site.subdomain}.puter.site`;
-
-                // 6. Guardar la URL en el historial del proyecto
+                // 5. Lo guardamos en el historial
                 if (currentId) {
                     const item = history.find(h => h.id === currentId);
                     if(item) {
@@ -287,16 +243,15 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                     }
                 }
 
-                // 7. Notificar al usuario y copiar URL
                 copyToClipboard(finalUrl, "¡Link público copiado al portapapeles! 🌐");
                 
                 setTimeout(() => {
-                    alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y el botón ya aparece en la barra lateral.`);
+                    alert(`¡Éxito! Tu aplicación está subida.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y el botón ya aparece en la barra lateral.`);
                 }, 100);
 
             } catch (error) {
-                console.error("Error publicando en Puter:", error);
-                alert("Hubo un error al generar el link público. Detalles: " + (error.message || JSON.stringify(error)));
+                console.error("Error publicando en Mocky:", error);
+                alert("Hubo un error al generar el link público. Detalles: " + error.message);
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -336,7 +291,6 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                 li.className = `history-item ${item.id === currentId ? 'active' : ''}`;
                 const hasHTML = item.htmlCode && item.htmlCode.trim() !== "";
                 
-                // Botón de Link Público SI existe
                 const linkHTML = item.publicUrl ? `<a href="${item.publicUrl}" target="_blank" class="item-link" onclick="event.stopPropagation()">🌐 Ver link público</a>` : '';
 
                 li.innerHTML = `
