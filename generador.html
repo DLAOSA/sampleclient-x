@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Mockups - AARPIA Engine</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+        h1 { font-size: 1.8rem; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        p.subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main); }
+        
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background: #0b1120;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 6px;
+            padding: 1rem;
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 1rem;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); }
+
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        button:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: #059669; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--border); }
+
+        /* Loader */
+        .loader-container {
+            display: none;
+            align-items: center;
+            gap: 15px;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+        .spinner {
+            width: 24px; height: 24px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Fallback Modal */
+        #fallbackUI { display: none; border-left-color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+        
+        /* Code area */
+        details {
+            background: #0b1120;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+        summary {
+            padding: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+        }
+        pre { margin: 0; max-height: 500px; overflow-y: auto; }
+        code { padding: 1rem; font-family: monospace; font-size: 0.9rem; }
+
+        /* Animaciones */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>⚡ AARPIA Mockup Generator</h1>
+        <p class="subtitle">Generador de UI/UX Autónomo simulando la máquina de estados local.</p>
+    </header>
+
+    <div class="card" id="initialSection">
+        <label for="userRequest">1. Describe la aplicación o proceso que necesitas:</label>
+        <textarea id="userRequest" placeholder="Ej: Un panel de control para un taller mecánico donde se aprueban presupuestos y se marcan vehículos como reparados. Debe verse industrial pero moderno..."></textarea>
+        <button id="generateBtn" onclick="startGeneration()">Generar App Completa</button>
+    </div>
+
+    <div class="loader-container" id="loader">
+        <div class="spinner"></div>
+        <div>
+            <strong>Generando Mockup...</strong>
+            <p class="subtitle" id="loaderText">Conectando con Puter AI (probando modelos...)</p>
+        </div>
+    </div>
+
+    <div class="card hidden" id="fallbackUI">
+        <label style="color: var(--warning);">⚠️ La API de IA falló (Modelos ocupados o sin conexión)</label>
+        <p class="subtitle" style="margin-bottom: 1rem;">Copia el prompt maestro generado a continuación y pégalo directamente en Gemini, ChatGPT o Claude.</p>
+        <textarea id="fallbackPromptRaw" readonly style="min-height: 200px; font-family: monospace; font-size: 0.85rem;"></textarea>
+        <button class="btn-warning" onclick="copyFallbackPrompt()" style="background: var(--warning);">📋 Copiar Prompt al Portapapeles</button>
+    </div>
+
+    <div class="card hidden" id="resultSection">
+        <label>🎉 Mockup Generado Exitosamente</label>
+        <div class="btn-group" style="margin-bottom: 1.5rem;">
+            <button class="btn-success" onclick="previewInNewTab()">👁️ Abrir en Nueva Pestaña</button>
+            <button class="btn-outline" onclick="downloadHTML()">💾 Descargar HTML</button>
+        </div>
+
+        <details>
+            <summary>Ver Código HTML Fuente</summary>
+            <pre><code id="codeBlock" class="language-html"></code></pre>
+        </details>
+    </div>
+
+    <div class="card hidden" id="editSection">
+        <label for="editRequest">2. ¿Quieres hacer cambios sobre este diseño?</label>
+        <textarea id="editRequest" placeholder="Ej: Cambia el color principal a rojo oscuro y añade un botón para cancelar el proceso..."></textarea>
+        <button onclick="startEdition()">Aplicar Cambios</button>
+    </div>
+
+    <script>
+        // EL PROMPT MAESTRO
+        const MASTER_PROMPT = `Eres un desarrollador UI/UX y frontend senior. Tu trabajo es crear MOCKUPS INTERACTIVOS DE ALTA FIDELIDAD para presentar a clientes. 
+La aplicación debe verse y sentirse como si estuviera en producción, utilizando internamente la lógica de la máquina de estados "AARPIA", pero TOTALMENTE SIMULADA en el navegador (LocalStorage), sin conexiones a backend, Relays, ni pagos reales.
+Generas una ÚNICA página HTML completa, autónoma y 100% funcional a nivel de interfaz.
+
+# REGLAS ABSOLUTAS:
+1. **UN SOLO ARCHIVO HTML** — Todo (HTML + CSS + JS) en un archivo.
+2. **SOLO CSS VANILLA** — PROHIBIDO usar TailwindCSS o Bootstrap. Escribe TODO el CSS a mano.
+3. **DISEÑO ÚNICO (EFECTO WOW)** — Identidad visual propia, micro-animaciones, layout responsive estricto, notificaciones toast caseras.
+4. **SIMULACIÓN DE RED** — Añade pequeños retrasos (setTimeout) en botones para simular carga.
+5. **NUNCA MENCIONES "AARPIA"** o términos técnicos en la UI visible al usuario.
+6. **MARKETPLACE SCOPING**: Al iniciar, verifica/genera un 'mobi_scope' (6 caracteres) en localStorage y filtra los datos mostrados por ese scope.
+
+# EL MOTOR AARPIA (SIMULADO EN LOCALSTORAGE):
+Debes programar un "Motor AARPIA Local" en el <script>. Cada proceso tiene 10 campos: instance_hash, entity_name, context_name, genesis_hash, owner_did, trigger_hash, current_state, target_state, version ("1.0.0"), y actions_log (Array de acciones).
+- **Ciclo:** 1) Creación guardando datos de negocio en actions_log. 2) Transiciones añadiendo al actions_log. 3) Cierre automático (Lacrado/Meta) si current_state === target_state (sealed: true y seal_hash).
+- Guarda todo en localStorage ('aarpia_mock_db').
+
+AUTENTICACIÓN Y PAGOS: Simula un login inicial creando un 'mock_user_id' y simulando un saldo local si la app requiere pagos.
+
+ENTREGA SOLO EL CÓDIGO HTML (empezando con <!DOCTYPE html> y terminando con </html>), sin texto conversacional introductorio ni final.`;
+
+        // Estado de la app
+        let currentHTMLCode = "";
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedCode = localStorage.getItem('aarpia_generator_last_code');
+            const savedReq = localStorage.getItem('aarpia_generator_last_req');
+            
+            if (savedReq) document.getElementById('userRequest').value = savedReq;
+            if (savedCode) {
+                currentHTMLCode = savedCode;
+                showResults();
+            }
+        });
+
+        // Lógica de IA con Puter.js
+        async function callPuterAI(promptText) {
+            // Modelos gratuitos y potentes disponibles en Puter como fallback
+            const models = ['claude-3-5-sonnet', 'gpt-4o', 'meta-llama-3'];
+            let lastError = null;
+
+            for (const model of models) {
+                try {
+                    document.getElementById('loaderText').innerText = `Procesando con modelo: ${model}...`;
+                    // Puter API Call
+                    const response = await puter.ai.chat(promptText, { model: model });
+                    
+                    // Extraer solo el HTML
+                    let content = typeof response === 'string' ? response : response.message.content;
+                    return extractHTML(content);
+                } catch (error) {
+                    console.warn(`Fallo con el modelo ${model}:`, error);
+                    lastError = error;
+                }
+            }
+            throw new Error("Todos los modelos de Puter fallaron.");
+        }
+
+        // Extraer HTML limpiando el markdown de las respuestas del LLM
+        function extractHTML(text) {
+            const match = text.match(/```html\s*([\s\S]*?)\s*```/i) || text.match(/```\s*([\s\S]*?)\s*```/i);
+            return match ? match[1].trim() : text.trim();
+        }
+
+        // Flujo de Generación
+        async function startGeneration() {
+            const request = document.getElementById('userRequest').value.trim();
+            if (!request) return alert("Por favor, describe la app primero.");
+
+            localStorage.setItem('aarpia_generator_last_req', request);
+            const finalPrompt = `${MASTER_PROMPT}\n\nLA SOLICITUD ESPECÍFICA DEL CLIENTE ES LA SIGUIENTE:\n${request}`;
+
+            await executePrompt(finalPrompt);
+        }
+
+        // Flujo de Edición
+        async function startEdition() {
+            const editRequest = document.getElementById('editRequest').value.trim();
+            if (!editRequest) return alert("Por favor, describe qué quieres cambiar.");
+
+            const editPrompt = `${MASTER_PROMPT}\n\nREGLA EXTRA: Eres un editor. Toma el siguiente código base, aplica los cambios solicitados por el usuario y devuélveme EL CÓDIGO HTML COMPLETO ACTUALIZADO (no solo fragmentos).\n\n--- CAMBIOS SOLICITADOS ---\n${editRequest}\n\n--- CÓDIGO ACTUAL ---\n${currentHTMLCode}`;
+
+            await executePrompt(editPrompt);
+        }
+
+        // Ejecución central
+        async function executePrompt(fullPrompt) {
+            document.getElementById('loader').style.display = 'flex';
+            document.getElementById('fallbackUI').classList.add('hidden');
+            disableButtons(true);
+
+            try {
+                currentHTMLCode = await callPuterAI(fullPrompt);
+                localStorage.setItem('aarpia_generator_last_code', currentHTMLCode);
+                showResults();
+            } catch (error) {
+                console.error(error);
+                showFallback(fullPrompt);
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+                disableButtons(false);
+            }
+        }
+
+        // Funciones de UI
+        function showResults() {
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('editSection').classList.remove('hidden');
+            
+            const codeBlock = document.getElementById('codeBlock');
+            codeBlock.textContent = currentHTMLCode;
+            
+            // Re-aplicar syntax highlighting
+            delete codeBlock.dataset.highlighted;
+            hljs.highlightElement(codeBlock);
+            
+            document.getElementById('editRequest').value = '';
+        }
+
+        function showFallback(promptText) {
+            document.getElementById('fallbackUI').classList.remove('hidden');
+            document.getElementById('fallbackPromptRaw').value = promptText;
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('editSection').classList.add('hidden');
+        }
+
+        function copyFallbackPrompt() {
+            const text = document.getElementById('fallbackPromptRaw');
+            text.select();
+            document.execCommand('copy');
+            alert("¡Prompt copiado! Pégalo en Gemini o ChatGPT.");
+        }
+
+        function previewInNewTab() {
+            const blob = new Blob([currentHTMLCode], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        }
+
+        function downloadHTML() {
+            const blob = new Blob([currentHTMLCode], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'aarpia_mockup.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function disableButtons(disabled) {
+            document.querySelectorAll('button').forEach(b => b.disabled = disabled);
+        }
+    </script>
+</body>
+</html>
