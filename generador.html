@@ -159,7 +159,7 @@
             <div class="divider"></div>
 
             <div>
-                <label for="htmlInput" style="color: var(--accent);">2. Pega aquí el HTML devuelto por Gemini (Pégalo también aquí si le pides cambios en el chat):</label>
+                <label for="htmlInput" style="color: var(--accent);">2. Pega aquí el HTML devuelto por Gemini:</label>
                 <textarea id="htmlInput" placeholder="<!DOCTYPE html>..."></textarea>
                 
                 <div class="btn-group">
@@ -243,7 +243,7 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             window.open(URL.createObjectURL(blob), '_blank');
         }
 
-        /* --- 2. HOSTING PÚBLICO CON PUTER.JS CORREGIDO --- */
+        /* --- 2. HOSTING PÚBLICO CON PUTER.JS (CORREGIDO) --- */
         async function publishToPuter() {
             let htmlCode = document.getElementById('htmlInput').value.trim();
             if (!htmlCode) return alert("⚠️ Pega el código HTML primero antes de publicar.");
@@ -257,23 +257,27 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             btn.disabled = true;
 
             try {
-                // 1. Pedir login si no está conectado (es gratis)
+                // 1. Pedir login si no está conectado
                 if (!puter.auth.isSignedIn()) {
                     await puter.auth.signIn();
                 }
 
-                // 2. Crear un directorio único
-                const dirName = `mockup_${Date.now()}`;
+                // 2. Crear nombres únicos seguros (solo texto alfanumérico)
+                const randomHash = Math.random().toString(36).substring(2, 10);
+                const dirName = "app" + randomHash;
+                const subName = "site" + randomHash;
+
+                // 3. Crear directorio en el cloud y escribir el HTML ahí
                 await puter.fs.mkdir(dirName);
-                
-                // 3. Escribir el archivo dentro de esa carpeta
                 await puter.fs.write(`${dirName}/index.html`, htmlCode);
 
-                // 4. Crear el hosting asociado (CORRECCIÓN APLICADA AQUÍ)
-                const site = await puter.hosting.create(dirName);
-                const finalUrl = site.url;
+                // 4. Crear el hosting vinculando explícitamente el subdominio con la carpeta
+                const site = await puter.hosting.create(subName, dirName);
 
-                // 5. Guardar la URL en el historial del proyecto
+                // 5. CONSTRUIR LA URL REAL (Aquí estaba el fallo, no es .url, es estructurarlo con .subdomain)
+                const finalUrl = `https://${site.subdomain}.puter.site`;
+
+                // 6. Guardar la URL en el historial del proyecto
                 if (currentId) {
                     const item = history.find(h => h.id === currentId);
                     if(item) {
@@ -283,12 +287,11 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                     }
                 }
 
-                // 6. Notificar al usuario y copiar URL
+                // 7. Notificar al usuario y copiar URL
                 copyToClipboard(finalUrl, "¡Link público copiado al portapapeles! 🌐");
                 
-                // Pequeño timeout para asegurar que el DOM de Puter no bloquee el alert
                 setTimeout(() => {
-                    alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y se ha guardado en la barra lateral.`);
+                    alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y el botón ya aparece en la barra lateral.`);
                 }, 100);
 
             } catch (error) {
@@ -333,7 +336,7 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                 li.className = `history-item ${item.id === currentId ? 'active' : ''}`;
                 const hasHTML = item.htmlCode && item.htmlCode.trim() !== "";
                 
-                // Mostrar la URL si existe
+                // Botón de Link Público SI existe
                 const linkHTML = item.publicUrl ? `<a href="${item.publicUrl}" target="_blank" class="item-link" onclick="event.stopPropagation()">🌐 Ver link público</a>` : '';
 
                 li.innerHTML = `
