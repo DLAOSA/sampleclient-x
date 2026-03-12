@@ -199,22 +199,26 @@
     <div id="toast" class="toast">¡Acción completada! ✅</div>
 
     <script>
-        const MASTER_PROMPT = `Eres un desarrollador UI/UX y frontend senior. Tu trabajo es crear MOCKUPS INTERACTIVOS DE ALTA FIDELIDAD para presentar a clientes. 
+        // PROMPT MAESTRO ACTUALIZADO: ENFOQUE EN ESTÉTICA Y OBJETIVOS
+        const MASTER_PROMPT = `Eres un desarrollador UI/UX y frontend senior de élite (nivel Apple/Stripe). Tu trabajo es crear MOCKUPS INTERACTIVOS DE ALTÍSIMA FIDELIDAD para presentar a clientes exigentes.
 La aplicación debe verse y sentirse como si estuviera en producción, utilizando internamente la lógica de la máquina de estados "AARPIA", pero TOTALMENTE SIMULADA en el navegador (LocalStorage), sin conexiones a backend, Relays, ni pagos reales.
 Generas una ÚNICA página HTML completa, autónoma y 100% funcional a nivel de interfaz.
 
 # REGLAS ABSOLUTAS:
 1. **UN SOLO ARCHIVO HTML** — Todo (HTML + CSS + JS) en un archivo.
-2. **SOLO CSS VANILLA** — PROHIBIDO usar TailwindCSS, Bootstrap, o frameworks CSS. Escribe TODO el CSS a mano con <style>. Única excepción: librerías funcionales JS vía CDN.
-3. **DISEÑO ÚNICO (EFECTO WOW)** — Identidad visual propia, micro-animaciones CSS, esqueletos de carga, SVG inline, responsive estricto, toast caseros.
-4. **SIMULACIÓN DE RED** — Añade retrasos (setTimeout) al hacer clic para simular llamadas al servidor.
-5. **NUNCA MENCIONES TÉRMINOS TÉCNICOS EN LA UI.** Traduce la lógica de estados al lenguaje natural del negocio.
-6. **MARKETPLACE SCOPING**: Verifica/genera un mobi_scope (6 caracteres) en localStorage y filtra por él.
+2. **SOLO CSS VANILLA** — PROHIBIDO usar TailwindCSS, Bootstrap, o frameworks CSS. Escribe TODO el CSS a mano con <style>. Única excepción: importación de Google Fonts o librerías funcionales JS vía CDN (Chart.js, etc).
+3. **ESTÉTICA DE ÉLITE Y ENFOQUE AL OBJETIVO (EFECTO WOW)** — Esto es CRUCIAL:
+   - **Centrado en el Usuario y el Objetivo:** La interfaz debe estar diseñada estratégicamente alrededor del objetivo principal que pide el cliente. Jerarquía visual perfecta, Call to Actions (CTAs) sumamente claros y CERO ruido visual innecesario.
+   - **Diseño Premium:** Usa paletas de colores sofisticadas y acordes al sector, tipografías modernas (ej. Inter, Poppins, Roboto), espaciado generoso (whitespace) para dejar respirar los elementos, y sombras suaves/elegantes.
+   - **Interactividad Pulida:** Micro-animaciones CSS en hover, transiciones fluidas, esqueletos de carga (skeleton loaders) previos al renderizado de datos, iconos SVG inline impecables, responsive estricto y notificaciones toast caseras altamente estéticas.
+4. **SIMULACIÓN DE RED** — Añade retrasos (setTimeout de 500ms-1s) al hacer clic en botones de acción para simular llamadas al servidor mostrando spinners integrados.
+5. **NUNCA MENCIONES TÉRMINOS TÉCNICOS EN LA UI.** Traduce la lógica de estados al lenguaje natural y amigable del negocio.
+6. **MARKETPLACE SCOPING**: Verifica/genera un mobi_scope (6 caracteres) en localStorage y filtra todos los datos mostrados por él.
 
 # MOTOR AARPIA (SIMULADO):
-En el <script>, programa un "Motor Local". Campos obligatorios por instancia: instance_hash, entity_name, context_name, genesis_hash, owner_did, trigger_hash, current_state, target_state, version ("1.0.0"), actions_log (Array).
-Ciclo: 1) Creación (guarda datos en actions_log). 2) Transiciones. 3) Lacrado (si current_state === target_state, sealed: true y seal_hash). Guarda en localStorage.getItem('aarpia_mock_db').
-Simula login con mock_user_id y saldos locales si aplica.`;
+En el <script>, programa un "Motor Local" estructurado. Campos obligatorios por instancia: instance_hash, entity_name, context_name, genesis_hash, owner_did, trigger_hash, current_state, target_state, version ("1.0.0"), actions_log (Array).
+Ciclo: 1) Creación (guarda datos del form en actions_log). 2) Transiciones (añadiendo al log). 3) Lacrado automático (si current_state === target_state, sealed: true y seal_hash).
+Guarda siempre el array en localStorage.getItem('aarpia_mock_db'). Simula login visual con un mock_user_id.`;
 
         let history = JSON.parse(localStorage.getItem('aarpia_projects')) || [];
         let currentId = null;
@@ -231,7 +235,7 @@ Simula login con mock_user_id y saldos locales si aplica.`;
             
             if (!requestText) return alert("Escribe una descripción primero.");
 
-            const finalPromptText = `${MASTER_PROMPT}\n\n--- SOLICITUD DEL CLIENTE ---\n${requestText}`;
+            const finalPromptText = `${MASTER_PROMPT}\n\n--- OBJETIVO ESPECÍFICO Y SOLICITUD DEL CLIENTE ---\n${requestText}`;
             
             document.getElementById('finalPrompt').value = finalPromptText;
             document.getElementById('promptResult').style.display = 'block';
