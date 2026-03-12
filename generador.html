@@ -17,8 +17,6 @@
             --primary-hover: #1a7f64;
             --accent: #3b82f6;
             --accent-hover: #2563eb;
-            --warning: #f59e0b;
-            --warning-hover: #d97706;
             --info: #06b6d4;
             --info-hover: #0891b2;
             --border: #4d4d4f;
@@ -63,7 +61,7 @@
         .item-top svg.icon-msg { flex-shrink: 0; width: 16px; height: 16px; fill: currentColor; }
         .item-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .item-link { font-size: 0.75rem; color: var(--info); display: flex; align-items: center; gap: 4px; }
+        .item-link { font-size: 0.75rem; color: var(--info); display: flex; align-items: center; gap: 4px; text-decoration: none;}
         .item-link:hover { text-decoration: underline; }
 
         .actions-wrapper { position: absolute; right: 5px; top: 10px; display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; background: var(--sidebar-hover); padding-left: 5px;}
@@ -100,8 +98,7 @@
 
         #userInput { min-height: 120px; }
         #finalPrompt { min-height: 150px; background: #2a2b32; font-family: monospace; font-size: 0.85rem; }
-        #htmlInput { min-height: 250px; background: #1e1e24; font-family: monospace; font-size: 0.85rem; border-color: var(--accent); }
-        #editInput { min-height: 100px; border-color: var(--warning); }
+        #htmlInput { min-height: 350px; background: #1e1e24; font-family: monospace; font-size: 0.85rem; border-color: var(--accent); }
 
         .btn-group { display: flex; gap: 10px; margin-bottom: 2rem; flex-wrap: wrap; }
 
@@ -120,9 +117,6 @@
 
         button.info-btn { background: var(--info); }
         button.info-btn:hover { background: var(--info-hover); }
-
-        button.warning-btn { background: var(--warning); }
-        button.warning-btn:hover { background: var(--warning-hover); }
 
         .divider { height: 1px; background: var(--border); margin: 2rem 0; }
 
@@ -149,13 +143,13 @@
     <main class="main-content">
         <div class="container">
             <h1>⚡ Generador & Visualizador AARPIA</h1>
-            <p class="subtitle">1. Prompt Maestro -> 2. Pegar Código y Previsualizar -> 3. Compartir con Cliente.</p>
+            <p class="subtitle">1. Prompt Maestro para Gemini -> 2. Pegar Código y Previsualizar / Publicar.</p>
 
             <div>
                 <label for="userInput">1. Requisitos Iniciales de la UI:</label>
                 <textarea id="userInput" placeholder="Ej: Dashboard médico con tablas de pacientes, gráficas..."></textarea>
                 <div class="btn-group">
-                    <button class="primary-btn" onclick="generateAndCopy()">📋 Generar y Copiar Prompt</button>
+                    <button class="primary-btn" onclick="generateAndCopy()">📋 Generar y Copiar Prompt a Gemini</button>
                 </div>
                 <div id="promptResult" style="display: none;">
                     <textarea id="finalPrompt" readonly></textarea>
@@ -165,7 +159,7 @@
             <div class="divider"></div>
 
             <div>
-                <label for="htmlInput" style="color: var(--accent);">2. Pega el HTML generado por la IA aquí:</label>
+                <label for="htmlInput" style="color: var(--accent);">2. Pega aquí el HTML devuelto por Gemini (Pégalo también aquí si le pides cambios en el chat):</label>
                 <textarea id="htmlInput" placeholder="<!DOCTYPE html>..."></textarea>
                 
                 <div class="btn-group">
@@ -174,18 +168,6 @@
                     </button>
                     <button id="btnPublish" class="primary-btn info-btn" onclick="publishToPuter()">
                         🌐 Generar Link Público para Cliente
-                    </button>
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <div>
-                <label for="editInput" style="color: var(--warning);">3. Solicitar cambios a la IA:</label>
-                <textarea id="editInput" placeholder="Ej: Cambia el header a rojo y añade un botón de exportar..."></textarea>
-                <div class="btn-group">
-                    <button class="primary-btn warning-btn" onclick="generateEditPrompt()">
-                        🔄 Generar Prompt de Edición y Copiar
                     </button>
                 </div>
             </div>
@@ -207,6 +189,7 @@ Generas una ÚNICA página HTML completa, autónoma y 100% funcional a nivel de 
 4. **SIMULACIÓN DE RED** — Añade retrasos (setTimeout) en botones para simular carga.
 5. **NUNCA MENCIONES TÉRMINOS TÉCNICOS EN LA UI.**
 6. **MARKETPLACE SCOPING**: Verifica/genera un mobi_scope en localStorage y filtra datos por él.
+7. **ITERACIONES FUTURAS (OBLIGATORIO)**: Si a lo largo de este chat te pido cambios o modificaciones al diseño que me entregues, TIENES LA OBLIGACIÓN ESTRICTA de devolverme siempre el CÓDIGO HTML COMPLETO, de principio a fin, con los cambios aplicados. Está absolutamente prohibido omitir partes o usar comentarios tipo "// resto del código". Debo poder copiar tu respuesta completa y pegarla.
 
 # MOTOR AARPIA (SIMULADO):
 En el <script>, programa un "Motor Local". Campos: instance_hash, entity_name, context_name, genesis_hash, owner_did, trigger_hash, current_state, target_state, version ("1.0.0"), actions_log (Array).
@@ -260,7 +243,7 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             window.open(URL.createObjectURL(blob), '_blank');
         }
 
-        /* --- 2. NUEVO: HOSTING PÚBLICO CON PUTER.JS --- */
+        /* --- 2. HOSTING PÚBLICO CON PUTER.JS CORREGIDO --- */
         async function publishToPuter() {
             let htmlCode = document.getElementById('htmlInput').value.trim();
             if (!htmlCode) return alert("⚠️ Pega el código HTML primero antes de publicar.");
@@ -279,15 +262,15 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                     await puter.auth.signIn();
                 }
 
-                // 2. Crear un directorio único para que la URL detecte automáticamente el index.html
+                // 2. Crear un directorio único
                 const dirName = `mockup_${Date.now()}`;
                 await puter.fs.mkdir(dirName);
                 
                 // 3. Escribir el archivo dentro de esa carpeta
                 await puter.fs.write(`${dirName}/index.html`, htmlCode);
 
-                // 4. Crear el hosting asociado a esa carpeta
-                const site = await puter.hosting.create(undefined, dirName);
+                // 4. Crear el hosting asociado (CORRECCIÓN APLICADA AQUÍ)
+                const site = await puter.hosting.create(dirName);
                 const finalUrl = site.url;
 
                 // 5. Guardar la URL en el historial del proyecto
@@ -300,36 +283,24 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                     }
                 }
 
-                // 6. Notificar al usuario
+                // 6. Notificar al usuario y copiar URL
                 copyToClipboard(finalUrl, "¡Link público copiado al portapapeles! 🌐");
-                alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado al portapapeles. Puedes enviarlo directamente al cliente.`);
+                
+                // Pequeño timeout para asegurar que el DOM de Puter no bloquee el alert
+                setTimeout(() => {
+                    alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y se ha guardado en la barra lateral.`);
+                }, 100);
 
             } catch (error) {
-                console.error("Error publicando:", error);
-                alert("Hubo un error al generar el link público: " + error.message);
+                console.error("Error publicando en Puter:", error);
+                alert("Hubo un error al generar el link público. Detalles: " + (error.message || JSON.stringify(error)));
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
 
-        /* --- 3. EDICIÓN E HISTORIAL --- */
-        function generateEditPrompt() {
-            const currentHTML = document.getElementById('htmlInput').value.trim();
-            const editReq = document.getElementById('editInput').value.trim();
-            if (!currentHTML || !editReq) return alert("⚠️ Necesitas tener código pegado y escribir qué cambios quieres.");
-            
-            const editPromptText = `Eres un desarrollador UI/UX de élite. Tengo el siguiente HTML que simula el motor AARPIA localmente. 
-REGLA ESTRICTA: Devuelve el CÓDIGO HTML COMPLETO. NO uses comentarios tipo "// resto del código". NO omitas NADA.
-
---- CAMBIOS SOLICITADOS ---
-${editReq}
-
---- CÓDIGO ACTUAL ---
-\`\`\`html\n${currentHTML}\n\`\`\``;
-            copyToClipboard(editPromptText, "¡Prompt de EDICIÓN copiado!");
-        }
-
+        /* --- UTILIDADES --- */
         function copyToClipboard(text, msg) {
             navigator.clipboard.writeText(text).then(() => showToast(msg)).catch(() => {
                 const ta = document.createElement("textarea"); ta.value = text;
@@ -391,14 +362,13 @@ ${editReq}
             if(item.prompt) { document.getElementById('finalPrompt').value = item.prompt; document.getElementById('promptResult').style.display = 'block'; } 
             else { document.getElementById('promptResult').style.display = 'none'; }
             document.getElementById('htmlInput').value = item.htmlCode || "";
-            document.getElementById('editInput').value = "";
             renderHistory(); 
         }
 
         function createNewPrompt() {
             currentId = null;
             document.getElementById('userInput').value = ''; document.getElementById('finalPrompt').value = '';
-            document.getElementById('htmlInput').value = ''; document.getElementById('editInput').value = '';
+            document.getElementById('htmlInput').value = '';
             document.getElementById('promptResult').style.display = 'none'; document.getElementById('userInput').focus();
             renderHistory(); 
         }
