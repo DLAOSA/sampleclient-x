@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Prompts AARPIA</title>
+    <title>Generador & Visualizador AARPIA</title>
     <style>
         :root {
             --sidebar-bg: #202123;
@@ -14,6 +14,8 @@
             --text-muted: #8e8ea0;
             --primary: #10a37f;
             --primary-hover: #1a7f64;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
             --border: #4d4d4f;
         }
 
@@ -27,9 +29,9 @@
             overflow: hidden;
         }
 
-        /* Sidebar (Estilo ChatGPT) */
+        /* Sidebar */
         .sidebar {
-            width: 260px;
+            width: 280px;
             background-color: var(--sidebar-bg);
             display: flex;
             flex-direction: column;
@@ -53,7 +55,6 @@
             margin-bottom: 1rem;
             font-size: 0.9rem;
         }
-
         .new-chat-btn:hover { background-color: var(--sidebar-hover); }
 
         .history-list {
@@ -64,8 +65,6 @@
             flex-direction: column;
             gap: 0.25rem;
         }
-
-        /* Ocultar scrollbar visualmente pero permitir scroll */
         .history-list::-webkit-scrollbar { width: 5px; }
         .history-list::-webkit-scrollbar-thumb { background: #555; border-radius: 5px; }
 
@@ -77,28 +76,26 @@
             font-size: 0.85rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            gap: 8px;
+            transition: background 0.2s;
         }
-
-        .history-item:hover, .history-item.active {
-            background-color: var(--sidebar-hover);
-        }
-
-        .history-item svg { flex-shrink: 0; width: 16px; height: 16px; fill: currentColor; }
+        .history-item:hover, .history-item.active { background-color: var(--sidebar-hover); }
+        .history-item svg.icon-msg { flex-shrink: 0; width: 16px; height: 16px; fill: currentColor; }
         
-        .delete-btn {
-            margin-left: auto;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: none;
+        .item-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .actions-wrapper { display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; }
+        .history-item:hover .actions-wrapper, .history-item.active .actions-wrapper { opacity: 1; }
+
+        .icon-btn {
+            background: none; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            width: 24px; height: 24px; border-radius: 4px;
         }
-        .history-item:hover .delete-btn { display: block; }
-        .delete-btn:hover { color: #ef4444; }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        .play-btn { color: #10b981; }
+        .del-btn { color: var(--text-muted); }
+        .del-btn:hover { color: #ef4444; }
 
         /* Main Content */
         .main-content {
@@ -109,72 +106,45 @@
             padding: 2rem;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-        }
+        .container { max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 4rem; }
 
-        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #fff; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #fff; display: flex; align-items: center; gap: 10px; }
         p.subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem; }
 
-        label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main); }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main); font-size: 0.95rem; }
 
         textarea {
-            width: 100%;
-            background: var(--panel-bg);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            border-radius: 6px;
-            padding: 1rem;
-            font-size: 1rem;
-            resize: vertical;
-            margin-bottom: 1rem;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%; background: var(--panel-bg); border: 1px solid var(--border);
+            color: var(--text-main); border-radius: 6px; padding: 1rem;
+            font-size: 0.95rem; resize: vertical; margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         textarea:focus { outline: none; border-color: var(--primary); }
 
-        #userInput { min-height: 150px; }
-        #finalPrompt { min-height: 250px; background: #2a2b32; font-family: monospace; font-size: 0.85rem; }
+        #userInput { min-height: 120px; }
+        #finalPrompt { min-height: 150px; background: #2a2b32; font-family: monospace; font-size: 0.85rem; }
+        #htmlInput { min-height: 250px; background: #1e1e24; font-family: monospace; font-size: 0.85rem; border-color: var(--accent); }
+
+        .btn-group { display: flex; gap: 10px; margin-bottom: 2rem; }
 
         button.primary-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.85rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            justify-content: center;
+            background: var(--primary); color: white; border: none;
+            padding: 0.85rem 1.5rem; border-radius: 6px; font-weight: 600;
+            font-size: 1rem; cursor: pointer; transition: background 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1;
         }
         button.primary-btn:hover { background: var(--primary-hover); }
+        
+        button.accent-btn { background: var(--accent); }
+        button.accent-btn:hover { background: var(--accent-hover); }
 
-        .result-section {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border);
-            display: none;
-        }
+        .divider { height: 1px; background: var(--border); margin: 2rem 0; }
 
-        /* Toast Notification */
+        /* Toast */
         .toast {
-            position: fixed;
-            bottom: -50px;
-            right: 20px;
-            background: var(--primary);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 600;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: bottom 0.3s ease-in-out;
-            z-index: 1000;
+            position: fixed; bottom: -50px; right: 20px; background: var(--primary);
+            color: white; padding: 1rem 1.5rem; border-radius: 6px; font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: bottom 0.3s ease-in-out; z-index: 1000;
         }
         .toast.show { bottom: 20px; }
 
@@ -184,166 +154,168 @@
 
     <aside class="sidebar">
         <button class="new-chat-btn" onclick="createNewPrompt()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Nueva Solicitud
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nueva Solicitud / Proyecto
         </button>
-        <ul class="history-list" id="historyList">
-            </ul>
+        <ul class="history-list" id="historyList"></ul>
     </aside>
 
     <main class="main-content">
         <div class="container">
-            <h1>Generador de Prompts AARPIA</h1>
-            <p class="subtitle">Describe la interfaz. Se unirá automáticamente con las reglas de negocio y se copiará a tu portapapeles.</p>
+            <h1>⚡ Generador & Visualizador AARPIA</h1>
+            <p class="subtitle">1. Genera tu prompt maestro -> 2. Pásalo por la IA -> 3. Pega el código y previsualiza.</p>
 
-            <div class="input-section">
-                <label for="userInput">Describe la aplicación, vista o proceso:</label>
-                <textarea id="userInput" placeholder="Ej: Un panel de control para un taller mecánico donde se aprueban presupuestos y se marcan vehículos como reparados. Debe verse industrial pero moderno..."></textarea>
+            <div>
+                <label for="userInput">1. Describe la aplicación o proceso (Requisitos de UI):</label>
+                <textarea id="userInput" placeholder="Ej: Un dashboard administrativo para un hospital. Necesito tablas de pacientes, gráficas de ingresos y notificaciones de emergencia..."></textarea>
                 
-                <button class="primary-btn" onclick="generateAndCopy()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    Generar y Copiar Prompt
-                </button>
+                <div class="btn-group">
+                    <button class="primary-btn" onclick="generateAndCopy()">
+                        📋 Generar y Copiar Prompt
+                    </button>
+                </div>
+
+                <div id="promptResult" style="display: none;">
+                    <label>Prompt Generado (Ya copiado al portapapeles):</label>
+                    <textarea id="finalPrompt" readonly></textarea>
+                </div>
             </div>
 
-            <div class="result-section" id="resultSection">
-                <label>Prompt Generado (Ya está en tu portapapeles):</label>
-                <textarea id="finalPrompt" readonly></textarea>
-                <button class="primary-btn" style="background: #444654; border: 1px solid #555;" onclick="copyToClipboardOnly()">
-                    Copiar de nuevo
+            <div class="divider"></div>
+
+            <div>
+                <label for="htmlInput" style="color: var(--accent);">2. Pega el código HTML devuelto por la IA:</label>
+                <textarea id="htmlInput" placeholder="<!DOCTYPE html>
+<html lang='es'>
+... pégalo aquí ..."></textarea>
+                
+                <button class="primary-btn accent-btn" onclick="saveAndPreviewHTML()">
+                    ▶️ Guardar y Previsualizar en Nueva Pestaña
                 </button>
             </div>
         </div>
     </main>
 
-    <div id="toast" class="toast">¡Prompt copiado al portapapeles! 📋</div>
+    <div id="toast" class="toast">¡Acción completada! ✅</div>
 
     <script>
-        // EL PROMPT MAESTRO (Intocable)
         const MASTER_PROMPT = `Eres un desarrollador UI/UX y frontend senior. Tu trabajo es crear MOCKUPS INTERACTIVOS DE ALTA FIDELIDAD para presentar a clientes. 
 La aplicación debe verse y sentirse como si estuviera en producción, utilizando internamente la lógica de la máquina de estados "AARPIA", pero TOTALMENTE SIMULADA en el navegador (LocalStorage), sin conexiones a backend, Relays, ni pagos reales.
 Generas una ÚNICA página HTML completa, autónoma y 100% funcional a nivel de interfaz.
 
-# REGLAS ABSOLUTAS (LEER ANTES DE ESCRIBIR UNA SOLA LÍNEA):
-
+# REGLAS ABSOLUTAS:
 1. **UN SOLO ARCHIVO HTML** — Todo (HTML + CSS + JS) en un archivo.
-2. **SOLO CSS VANILLA** — PROHIBIDO usar TailwindCSS, Bootstrap, o frameworks CSS vía CDN. Escribe TODO el CSS a mano con <style>. Usa CSS moderno (custom properties, flexbox, grid, animations). Única excepción: librerías funcionales JS (Chart.js, canvas confetti, etc.) vía CDN.
-3. **DISEÑO ÚNICO Y ORIGINAL (EFECTO WOW)** — La interfaz debe impresionar al cliente:
-   - Identidad visual PROPIA acorde a su dominio.
-   - Micro-animaciones CSS en hover, transiciones suaves, esqueletos de carga (skeleton loaders).
-   - Iconos: SVG INLINE obligatorios. NO USAR EMOJIS COMO ICONOS.
-   - Layout responsive estricto, perfecto tanto en móvil como en escritorio.
-   - Notificaciones toast caseras con animaciones CSS para dar feedback.
-4. **SIMULACIÓN DE RED** — Añade pequeños retrasos (setTimeout de 500ms - 1s) al hacer clic en botones de acción para simular llamadas al servidor.
-5. **NUNCA MENCIONES "AARPIA", "HASHES", "STATE MACHINE" NI TÉRMINOS TÉCNICOS EN LA UI.** Traduce la lógica de estados al lenguaje natural (ej. "Enviado a revisión").
-6. **MARKETPLACE SCOPING (MULTI-TENANCY)**: Al iniciar, verifica en localStorage si existe un mobi_scope. Si no, genera uno de 6 caracteres. Filtra todo por este scope.
+2. **SOLO CSS VANILLA** — PROHIBIDO usar TailwindCSS, Bootstrap, o frameworks CSS. Escribe TODO el CSS a mano con <style>. Única excepción: librerías funcionales JS vía CDN.
+3. **DISEÑO ÚNICO (EFECTO WOW)** — Identidad visual propia, micro-animaciones CSS, esqueletos de carga, SVG inline, responsive estricto, toast caseros.
+4. **SIMULACIÓN DE RED** — Añade retrasos (setTimeout) al hacer clic para simular llamadas al servidor.
+5. **NUNCA MENCIONES TÉRMINOS TÉCNICOS EN LA UI.** Traduce la lógica de estados al lenguaje natural del negocio.
+6. **MARKETPLACE SCOPING**: Verifica/genera un mobi_scope (6 caracteres) en localStorage y filtra por él.
 
-# EL MOTOR AARPIA (SIMULADO EN LOCALSTORAGE - OBLIGATORIO):
-En lugar de enviar mensajes a un Relay, DEBES programar un pequeño "Motor AARPIA Local" en JavaScript dentro del <script>. Cada proceso DEBE tener estos 10 campos: instance_hash, entity_name, context_name, genesis_hash, owner_did, trigger_hash, current_state, target_state, version ("1.0.0"), actions_log (Array de acciones).
+# MOTOR AARPIA (SIMULADO):
+En el <script>, programa un "Motor Local". Campos obligatorios por instancia: instance_hash, entity_name, context_name, genesis_hash, owner_did, trigger_hash, current_state, target_state, version ("1.0.0"), actions_log (Array).
+Ciclo: 1) Creación (guarda datos en actions_log). 2) Transiciones. 3) Lacrado (si current_state === target_state, sealed: true y seal_hash). Guarda en localStorage.getItem('aarpia_mock_db').
+Simula login con mock_user_id y saldos locales si aplica.`;
 
-## Ciclo de Vida del Motor Simulado:
-1. **Creación**: Crea el objeto, guarda los datos en actions_log y a localStorage.
-2. **Transiciones**: Al cambiar de estado, añade al actions_log.
-3. **Cierre automático (LACRADO)**: Si current_state === target_state, el objeto se "lacra" (sealed: true) y se le genera un seal_hash falso.
-4. **Persistencia**: Guarda en localStorage.getItem('aarpia_mock_db').
-
-AUTENTICACIÓN Y PAGOS (SIMULADOS):
-Muestra un login atractivo. Genera un mock_user_id falso. Si requiere dinero, inventa un saldo local (localStorage.setItem('mock_balance', 150000)). NADA DE WEBLN REAL.`;
-
-        // Estado y base de datos local
-        let history = JSON.parse(localStorage.getItem('aarpia_prompt_history')) || [];
+        let history = JSON.parse(localStorage.getItem('aarpia_projects')) || [];
         let currentId = null;
 
-        // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
             renderHistory();
-            if(history.length > 0) {
-                loadHistoryItem(history[0].id);
-            }
+            if(history.length > 0) loadHistoryItem(history[0].id);
         });
 
-        // Generar, Copiar y Guardar
+        // 1. Generar Prompt
         function generateAndCopy() {
             const inputEl = document.getElementById('userInput');
             const requestText = inputEl.value.trim();
             
-            if (!requestText) {
-                alert("Por favor, escribe una descripción primero.");
-                inputEl.focus();
-                return;
+            if (!requestText) return alert("Escribe una descripción primero.");
+
+            const finalPromptText = `${MASTER_PROMPT}\n\n--- SOLICITUD DEL CLIENTE ---\n${requestText}`;
+            
+            document.getElementById('finalPrompt').value = finalPromptText;
+            document.getElementById('promptResult').style.display = 'block';
+
+            copyToClipboard(finalPromptText);
+            saveToHistory(requestText, finalPromptText, document.getElementById('htmlInput').value);
+        }
+
+        // 2. Guardar y Previsualizar HTML
+        function saveAndPreviewHTML() {
+            let htmlCode = document.getElementById('htmlInput').value.trim();
+            
+            if (!htmlCode) return alert("Pega el código HTML generado por la IA primero.");
+            if (!currentId) {
+                // Si pega HTML sin haber generado un prompt, creamos un item genérico
+                saveToHistory("Proyecto sin prompt", "", htmlCode);
+            } else {
+                // Actualiza el item actual con el nuevo HTML
+                const item = history.find(h => h.id === currentId);
+                if(item) {
+                    item.htmlCode = htmlCode;
+                    localStorage.setItem('aarpia_projects', JSON.stringify(history));
+                    renderHistory();
+                }
             }
 
-            // Construir el prompt final
-            const finalPromptText = `${MASTER_PROMPT}\n\n--- SOLICITUD ESPECÍFICA DEL CLIENTE ---\n${requestText}`;
+            openInNewTab(htmlCode);
+            showToast("Código guardado y abriendo pestaña...");
+        }
+
+        function openInNewTab(htmlContent) {
+            // Limpiar posibles bloques markdown (```html ... ```) si el usuario los copió sin querer
+            htmlContent = htmlContent.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
             
-            // Mostrar en UI
-            document.getElementById('finalPrompt').value = finalPromptText;
-            document.getElementById('resultSection').style.display = 'block';
-
-            // Copiar al portapapeles
-            copyToClipboard(finalPromptText);
-
-            // Guardar en el historial
-            saveToHistory(requestText, finalPromptText);
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
         }
 
-        // Solo copiar lo que ya está en la caja de texto final
-        function copyToClipboardOnly() {
-            const text = document.getElementById('finalPrompt').value;
-            copyToClipboard(text);
+        // 3. Play Directo desde el historial
+        function playHistoryItem(event, id) {
+            event.stopPropagation();
+            const item = history.find(h => h.id === id);
+            if(item && item.htmlCode) {
+                openInNewTab(item.htmlCode);
+            }
         }
 
-        // Utilidad para copiar y mostrar el Toast
+        // Utilidades
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast();
-            }).catch(err => {
-                console.error('Error al copiar: ', err);
-                // Fallback para navegadores antiguos
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand("Copy");
-                textArea.remove();
+            navigator.clipboard.writeText(text).then(showToast).catch(() => {
+                const ta = document.createElement("textarea"); ta.value = text;
+                document.body.appendChild(ta); ta.select(); document.execCommand("Copy"); ta.remove();
                 showToast();
             });
         }
 
-        function showToast() {
+        function showToast(msg = "¡Prompt copiado al portapapeles! 📋") {
             const toast = document.getElementById('toast');
+            toast.innerText = msg;
             toast.classList.add('show');
-            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         // Gestión del Historial
-        function saveToHistory(userInput, finalPrompt) {
-            // Generar título corto basado en el input
-            let title = userInput.substring(0, 30).replace(/\n/g, " ");
-            if (userInput.length > 30) title += "...";
+        function saveToHistory(userInput, finalPrompt, htmlCode = "") {
+            let title = userInput.substring(0, 30).replace(/\n/g, " ") + (userInput.length > 30 ? "..." : "");
 
             if (currentId) {
-                // Actualizar existente
-                const itemIndex = history.findIndex(h => h.id === currentId);
-                if(itemIndex > -1) {
-                    history[itemIndex].input = userInput;
-                    history[itemIndex].prompt = finalPrompt;
-                    history[itemIndex].title = title;
+                const index = history.findIndex(h => h.id === currentId);
+                if(index > -1) {
+                    history[index].input = userInput;
+                    history[index].prompt = finalPrompt;
+                    history[index].htmlCode = htmlCode;
+                    history[index].title = title;
                 }
             } else {
-                // Crear nuevo
                 const newItem = {
-                    id: Date.now().toString(),
-                    title: title,
-                    input: userInput,
-                    prompt: finalPrompt,
-                    date: new Date().toLocaleString()
+                    id: Date.now().toString(), title, input: userInput, prompt: finalPrompt, htmlCode, date: new Date().toLocaleString()
                 };
-                history.unshift(newItem); // Añadir al principio
+                history.unshift(newItem);
                 currentId = newItem.id;
             }
-
-            localStorage.setItem('aarpia_prompt_history', JSON.stringify(history));
+            localStorage.setItem('aarpia_projects', JSON.stringify(history));
             renderHistory();
         }
 
@@ -355,17 +327,18 @@ Muestra un login atractivo. Genera un mock_user_id falso. Si requiere dinero, in
                 const li = document.createElement('li');
                 li.className = `history-item ${item.id === currentId ? 'active' : ''}`;
                 
-                // Icono de mensaje
-                const icon = `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-                
+                const hasHTML = item.htmlCode && item.htmlCode.trim() !== "";
+
                 li.innerHTML = `
-                    ${icon}
-                    <span style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis;">${item.title}</span>
-                    <button class="delete-btn" onclick="deleteHistoryItem(event, '${item.id}')" title="Borrar">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
+                    <svg class="icon-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <span class="item-title">${item.title}</span>
+                    <div class="actions-wrapper">
+                        ${hasHTML ? `<button class="icon-btn play-btn" onclick="playHistoryItem(event, '${item.id}')" title="Previsualizar Código">▶️</button>` : ''}
+                        <button class="icon-btn del-btn" onclick="deleteHistoryItem(event, '${item.id}')" title="Borrar">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
                 `;
-                
                 li.onclick = () => loadHistoryItem(item.id);
                 list.appendChild(li);
             });
@@ -376,33 +349,35 @@ Muestra un login atractivo. Genera un mock_user_id falso. Si requiere dinero, in
             if (!item) return;
 
             currentId = id;
-            document.getElementById('userInput').value = item.input;
-            document.getElementById('finalPrompt').value = item.prompt;
-            document.getElementById('resultSection').style.display = 'block';
+            document.getElementById('userInput').value = item.input || "";
             
-            renderHistory(); // Actualizar clase 'active'
+            if(item.prompt) {
+                document.getElementById('finalPrompt').value = item.prompt;
+                document.getElementById('promptResult').style.display = 'block';
+            } else {
+                document.getElementById('promptResult').style.display = 'none';
+            }
+
+            document.getElementById('htmlInput').value = item.htmlCode || "";
+            renderHistory(); 
         }
 
         function createNewPrompt() {
             currentId = null;
             document.getElementById('userInput').value = '';
             document.getElementById('finalPrompt').value = '';
-            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('htmlInput').value = '';
+            document.getElementById('promptResult').style.display = 'none';
             document.getElementById('userInput').focus();
-            renderHistory(); // Quitar clase 'active'
+            renderHistory(); 
         }
 
         function deleteHistoryItem(event, id) {
-            event.stopPropagation(); // Evitar que dispare loadHistoryItem
-            if(confirm('¿Eliminar este prompt del historial?')) {
+            event.stopPropagation();
+            if(confirm('¿Eliminar este proyecto del historial?')) {
                 history = history.filter(h => h.id !== id);
-                localStorage.setItem('aarpia_prompt_history', JSON.stringify(history));
-                
-                if(currentId === id) {
-                    createNewPrompt();
-                } else {
-                    renderHistory();
-                }
+                localStorage.setItem('aarpia_projects', JSON.stringify(history));
+                currentId === id ? createNewPrompt() : renderHistory();
             }
         }
     </script>
