@@ -246,10 +246,8 @@ Simula login con mock_user_id y saldos locales si aplica.`;
             
             if (!htmlCode) return alert("Pega el código HTML generado por la IA primero.");
             if (!currentId) {
-                // Si pega HTML sin haber generado un prompt, creamos un item genérico
                 saveToHistory("Proyecto sin prompt", "", htmlCode);
             } else {
-                // Actualiza el item actual con el nuevo HTML
                 const item = history.find(h => h.id === currentId);
                 if(item) {
                     item.htmlCode = htmlCode;
@@ -263,9 +261,30 @@ Simula login con mock_user_id y saldos locales si aplica.`;
         }
 
         function openInNewTab(htmlContent) {
-            // Limpiar posibles bloques markdown (```html ... ```) si el usuario los copió sin querer
+            // Limpiar posibles bloques markdown (```html ... ```)
             htmlContent = htmlContent.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
             
+            // INYECCIÓN ANTI-CACHÉ Y LIMPIEZA DE DATOS AARPIA
+            const cacheBuster = `
+            <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+            <meta http-equiv="Pragma" content="no-cache">
+            <meta http-equiv="Expires" content="0">
+            <script>
+                localStorage.removeItem('aarpia_mock_db');
+                localStorage.removeItem('mobi_scope');
+                localStorage.removeItem('mock_user_id');
+                localStorage.removeItem('mock_balance');
+            <\/script>
+            `;
+
+            // Insertar el inyector justo después del <head>
+            if (htmlContent.toLowerCase().includes('<head>')) {
+                htmlContent = htmlContent.replace(/<head>/i, '<head>' + cacheBuster);
+            } else {
+                // Si la IA olvidó poner <head>, lo añadimos al principio
+                htmlContent = cacheBuster + htmlContent;
+            }
+
             const blob = new Blob([htmlContent], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             window.open(url, '_blank');
