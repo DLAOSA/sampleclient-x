@@ -112,7 +112,7 @@
                     <button class="primary-btn accent-btn" onclick="saveAndPreviewHTML()">
                         ▶️ Previsualizar Local
                     </button>
-                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToMocky()">
+                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToNpoint()">
                         🌐 Generar Link Público para Cliente
                     </button>
                 </div>
@@ -188,8 +188,8 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             window.open(URL.createObjectURL(blob), '_blank');
         }
 
-        /* --- NUEVO HOSTING PÚBLICO CON MOCKY --- */
-        async function publishToMocky() {
+        /* --- HOSTING PÚBLICO CON NPOINT.IO (SEGURO Y SIN ERRORES SSL) --- */
+        async function publishToNpoint() {
             let htmlCode = document.getElementById('htmlInput').value.trim();
             if (!htmlCode) return alert("⚠️ Pega el código HTML primero antes de publicar.");
 
@@ -198,40 +198,40 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
 
             const btn = document.getElementById('btnPublish');
             const originalText = btn.innerHTML;
-            btn.innerHTML = "⏳ Subiendo código y generando link...";
+            btn.innerHTML = "⏳ Subiendo código a un servidor seguro...";
             btn.disabled = true;
 
             try {
-                // 1. Enviamos el código a Mocky
-                const respuesta = await fetch("https://designer.mocky.io/api/v3/mocks", {
+                // 1. Enviamos el código a Npoint empaquetado como JSON
+                const respuesta = await fetch("https://api.npoint.io/", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
                     body: JSON.stringify({
-                        status: 200,
-                        content_type: "text/html",
-                        charset: "UTF-8",
-                        content: htmlCode
+                        html_content: htmlCode
                     })
                 });
 
+                if (!respuesta.ok) throw new Error("Fallo en el servidor externo");
+
                 const datos = await respuesta.json();
                 
-                // 2. Extraemos el ID generado
-                const idMocky = datos.link.split('/').pop();
+                // 2. Extraemos el ID generado por Npoint
+                const idNpoint = datos.id || datos.url.split('/').pop();
 
-                // 3. Calculamos la ruta de tu visor.html basándonos en dónde estás alojando este index
+                // 3. Calculamos la ruta de tu visor.html
                 const currentPath = window.location.pathname;
                 const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
                 const urlBase = window.location.origin + dirPath;
                 
-                // Si abres esto como archivo local (file://), urlBase se rompe para enviar a un cliente, 
-                // por lo que advertimos si no está hosteado:
                 if (window.location.protocol === "file:") {
-                    alert("⚠️ Aviso: Estás usando este archivo en local. El link se generará, pero necesitas subir visor.html a internet para que el cliente lo pueda abrir.");
+                    alert("⚠️ Aviso: Estás ejecutando esto en local. El enlace funciona, pero debes subir tu archivo visor.html a internet para que otras personas puedan verlo.");
                 }
 
-                // 4. Creamos la URL final para tu cliente
-                const finalUrl = `${urlBase}/visor.html?id=${idMocky}`;
+                // 4. Creamos la URL final para el cliente
+                const finalUrl = `${urlBase}/visor.html?id=${idNpoint}`;
 
                 // 5. Lo guardamos en el historial
                 if (currentId) {
@@ -246,11 +246,11 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                 copyToClipboard(finalUrl, "¡Link público copiado al portapapeles! 🌐");
                 
                 setTimeout(() => {
-                    alert(`¡Éxito! Tu aplicación está subida.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y el botón ya aparece en la barra lateral.`);
+                    alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y el botón ya aparece en la barra lateral.`);
                 }, 100);
 
             } catch (error) {
-                console.error("Error publicando en Mocky:", error);
+                console.error("Error publicando en Npoint:", error);
                 alert("Hubo un error al generar el link público. Detalles: " + error.message);
             } finally {
                 btn.innerHTML = originalText;
