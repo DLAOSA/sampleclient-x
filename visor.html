@@ -1,1 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista de la Aplicación</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; background-color: #f4f7f6; }
+        #pantalla-carga { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; color: #64748b; font-size: 1.2rem;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; 
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
 
+    <div id="pantalla-carga">
+        <div class="spinner"></div>
+        <div>Cargando entorno interactivo...</div>
+    </div>
+
+    <div id="app-container" style="display: none; height: 100vh; width: 100%;"></div>
+
+    <script>
+        // 1. Extraemos el ID de Npoint que viene en la URL
+        const parametros = new URLSearchParams(window.location.search);
+        const idNpoint = parametros.get('id');
+
+        if (idNpoint) {
+            // 2. Traemos el JSON seguro desde Npoint
+            fetch(`https://api.npoint.io/${idNpoint}`)
+                .then(respuesta => {
+                    if (!respuesta.ok) throw new Error("Documento no encontrado");
+                    return respuesta.json(); // Ahora leemos el archivo como JSON
+                })
+                .then(datos => {
+                    // Ocultamos la pantalla de carga y mostramos el contenedor
+                    document.getElementById('pantalla-carga').style.display = 'none';
+                    const container = document.getElementById('app-container');
+                    container.style.display = 'block';
+                    
+                    // Inyectamos el HTML que venía dentro de "html_content"
+                    container.innerHTML = datos.html_content;
+
+                    // 3. ¡MUY IMPORTANTE! Si el HTML tiene <script>, los re-evaluamos para que el motor funcione
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('pantalla-carga').innerHTML = "❌ Error: El enlace a este prototipo ya no es válido o ha expirado.";
+                    console.error("Detalle del error:", error);
+                });
+        } else {
+            document.getElementById('pantalla-carga').innerHTML = "⚠️ Error: Falta el ID del prototipo en la URL (ej: ?id=123).";
+        }
+    </script>
+</body>
+</html>
