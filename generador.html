@@ -16,7 +16,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { display: flex; height: 100vh; background-color: var(--main-bg); color: var(--text-main); overflow: hidden; }
 
-        /* Sidebar */
         .sidebar { width: 300px; background-color: var(--sidebar-bg); display: flex; flex-direction: column; padding: 0.5rem; border-right: 1px solid var(--border); flex-shrink: 0; }
         .new-chat-btn { background-color: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 0.75rem; border-radius: 6px; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; margin-bottom: 1rem; font-size: 0.9rem; }
         .new-chat-btn:hover { background-color: var(--sidebar-hover); }
@@ -43,7 +42,6 @@
         .del-btn { color: var(--text-muted); }
         .del-btn:hover { color: #ef4444; }
 
-        /* Main Content */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem; }
         .container { max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 4rem; }
 
@@ -71,13 +69,11 @@
 
         .divider { height: 1px; background: var(--border); margin: 2rem 0; }
 
-        /* Toast */
         .toast { position: fixed; bottom: -50px; right: 20px; background: var(--primary); color: white; padding: 1rem 1.5rem; border-radius: 6px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: bottom 0.3s ease-in-out; z-index: 1000; }
         .toast.show { bottom: 20px; }
     </style>
 </head>
 <body>
-
     <aside class="sidebar">
         <button class="new-chat-btn" onclick="createNewPrompt()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -109,15 +105,10 @@
                 <textarea id="htmlInput" placeholder="<!DOCTYPE html>..."></textarea>
                 
                 <div class="btn-group">
-                    <button class="primary-btn accent-btn" onclick="saveAndPreviewHTML()">
-                        ▶️ Previsualizar Local
-                    </button>
-                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToNpoint()">
-                        🌐 Generar Link Público para Cliente
-                    </button>
+                    <button class="primary-btn accent-btn" onclick="saveAndPreviewHTML()">▶️ Previsualizar Local</button>
+                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToBytebin()">🌐 Generar Link Público para Cliente</button>
                 </div>
             </div>
-
         </div>
     </main>
 
@@ -174,66 +165,45 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
 
         function openInNewTab(htmlContent) {
             htmlContent = htmlContent.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
-            const cacheBuster = `
-            <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-            <meta http-equiv="Pragma" content="no-cache">
-            <meta http-equiv="Expires" content="0">
-            <script>
-                localStorage.removeItem('aarpia_mock_db'); localStorage.removeItem('mobi_scope');
-                localStorage.removeItem('mock_user_id'); localStorage.removeItem('mock_balance');
-            <\/script>
-            `;
+            const cacheBuster = `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><script>localStorage.removeItem('aarpia_mock_db'); localStorage.removeItem('mobi_scope'); localStorage.removeItem('mock_user_id'); localStorage.removeItem('mock_balance');<\/script>`;
             htmlContent = htmlContent.toLowerCase().includes('<head>') ? htmlContent.replace(/<head>/i, '<head>' + cacheBuster) : cacheBuster + htmlContent;
             const blob = new Blob([htmlContent], { type: 'text/html' });
             window.open(URL.createObjectURL(blob), '_blank');
         }
 
-        /* --- HOSTING PÚBLICO CON NPOINT.IO (SEGURO Y SIN ERRORES SSL) --- */
-        async function publishToNpoint() {
+        /* --- BYTEBIN UPLOAD (Direct HTML) --- */
+        async function publishToBytebin() {
             let htmlCode = document.getElementById('htmlInput').value.trim();
             if (!htmlCode) return alert("⚠️ Pega el código HTML primero antes de publicar.");
 
-            // Limpiamos etiquetas de markdown
             htmlCode = htmlCode.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
 
             const btn = document.getElementById('btnPublish');
             const originalText = btn.innerHTML;
-            btn.innerHTML = "⏳ Subiendo código a un servidor seguro...";
+            btn.innerHTML = "⏳ Subiendo código a Bytebin...";
             btn.disabled = true;
 
             try {
-                // 1. Enviamos el código a Npoint empaquetado como JSON
-                const respuesta = await fetch("https://api.npoint.io/", {
+                // Post HTML directo
+                const respuesta = await fetch("https://bytebin.lucko.me/post", {
                     method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    body: JSON.stringify({
-                        html_content: htmlCode
-                    })
+                    headers: { "Content-Type": "text/html; charset=utf-8", "Accept": "application/json" },
+                    body: htmlCode
                 });
 
                 if (!respuesta.ok) throw new Error("Fallo en el servidor externo");
 
                 const datos = await respuesta.json();
-                
-                // 2. Extraemos el ID generado por Npoint
-                const idNpoint = datos.id || datos.url.split('/').pop();
+                const idBytebin = datos.key; // Bytebin devuelve una 'key'
 
-                // 3. Calculamos la ruta de tu visor.html
                 const currentPath = window.location.pathname;
                 const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
                 const urlBase = window.location.origin + dirPath;
                 
-                if (window.location.protocol === "file:") {
-                    alert("⚠️ Aviso: Estás ejecutando esto en local. El enlace funciona, pero debes subir tu archivo visor.html a internet para que otras personas puedan verlo.");
-                }
+                if (window.location.protocol === "file:") alert("Aviso: Ejecutando en local. Sube visor.html a internet.");
 
-                // 4. Creamos la URL final para el cliente
-                const finalUrl = `${urlBase}/visor.html?id=${idNpoint}`;
+                const finalUrl = `${urlBase}/visor.html?id=${idBytebin}`;
 
-                // 5. Lo guardamos en el historial
                 if (currentId) {
                     const item = history.find(h => h.id === currentId);
                     if(item) {
@@ -243,15 +213,12 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                     }
                 }
 
-                copyToClipboard(finalUrl, "¡Link público copiado al portapapeles! 🌐");
-                
-                setTimeout(() => {
-                    alert(`¡Éxito! Tu aplicación está subida a internet.\n\nLink: ${finalUrl}\n\nSe ha copiado a tu portapapeles y el botón ya aparece en la barra lateral.`);
-                }, 100);
+                copyToClipboard(finalUrl, "¡Link copiado! 🌐");
+                setTimeout(() => alert(`¡Éxito! Aplicación subida.\n\nLink: ${finalUrl}`), 100);
 
             } catch (error) {
-                console.error("Error publicando en Npoint:", error);
-                alert("Hubo un error al generar el link público. Detalles: " + error.message);
+                console.error("Error publicando en Bytebin:", error);
+                alert("Hubo un error al generar el link. Detalles: " + error.message);
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -290,7 +257,6 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                 const li = document.createElement('li');
                 li.className = `history-item ${item.id === currentId ? 'active' : ''}`;
                 const hasHTML = item.htmlCode && item.htmlCode.trim() !== "";
-                
                 const linkHTML = item.publicUrl ? `<a href="${item.publicUrl}" target="_blank" class="item-link" onclick="event.stopPropagation()">🌐 Ver link público</a>` : '';
 
                 li.innerHTML = `
