@@ -106,7 +106,7 @@
                 
                 <div class="btn-group">
                     <button class="primary-btn accent-btn" onclick="saveAndPreviewHTML()">▶️ Previsualizar Local</button>
-                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToBytebin()">🌐 Generar Link Público para Cliente</button>
+                    <button id="btnPublish" class="primary-btn info-btn" onclick="publishToServer()">🌐 Generar Link Público (Servidor)</button>
                 </div>
             </div>
         </div>
@@ -115,6 +115,9 @@
     <div id="toast" class="toast">¡Acción completada! ✅</div>
 
     <script>
+        // CONFIGURACIÓN DEL SERVIDOR AARPIA (Actualiza esta URL cuando lo subas a producción)
+        const SERVER_URL = "http://localhost:3000";
+
         const MASTER_PROMPT = `Eres un desarrollador UI/UX y frontend senior de élite (nivel Apple/Stripe). Tu trabajo es crear MOCKUPS INTERACTIVOS DE ALTÍSIMA FIDELIDAD para presentar a clientes exigentes.
 La aplicación debe verse y sentirse como si estuviera en producción, utilizando internamente la lógica de la máquina de estados "AARPIA", pero TOTALMENTE SIMULADA en el navegador (LocalStorage), sin conexiones a backend, Relays, ni pagos reales.
 Generas una ÚNICA página HTML completa, autónoma y 100% funcional a nivel de interfaz.
@@ -171,39 +174,35 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
             window.open(URL.createObjectURL(blob), '_blank');
         }
 
-        /* --- BYTEBIN UPLOAD (Direct HTML) --- */
-        async function publishToBytebin() {
+        /* --- SERVER UPLOAD (NUEVO BACKEND EXPRESS) --- */
+        async function publishToServer() {
             let htmlCode = document.getElementById('htmlInput').value.trim();
             if (!htmlCode) return alert("⚠️ Pega el código HTML primero antes de publicar.");
 
+            // Limpiamos los tags de markdown si están presentes
             htmlCode = htmlCode.replace(/^```html\s*/i, '').replace(/```\s*$/i, '');
 
             const btn = document.getElementById('btnPublish');
             const originalText = btn.innerHTML;
-            btn.innerHTML = "⏳ Subiendo código a Bytebin...";
+            btn.innerHTML = "⏳ Subiendo al servidor...";
             btn.disabled = true;
 
             try {
-                // Post HTML directo
-                const respuesta = await fetch("https://bytebin.lucko.me/post", {
+                // Enviamos el HTML directo al endpoint de nuestro servidor
+                const respuesta = await fetch(`${SERVER_URL}/api/save`, {
                     method: "POST",
                     headers: { "Content-Type": "text/html; charset=utf-8", "Accept": "application/json" },
                     body: htmlCode
                 });
 
-                if (!respuesta.ok) throw new Error("Fallo en el servidor externo");
+                if (!respuesta.ok) throw new Error("Fallo en la comunicación con el servidor");
 
                 const datos = await respuesta.json();
-                const idBytebin = datos.key; // Bytebin devuelve una 'key'
-
-                const currentPath = window.location.pathname;
-                const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-                const urlBase = window.location.origin + dirPath;
                 
-                if (window.location.protocol === "file:") alert("Aviso: Ejecutando en local. Sube visor.html a internet.");
+                // El servidor devuelve un JSON con { id: '...', url: '/view/...' }
+                const finalUrl = `${SERVER_URL}${datos.url}`;
 
-                const finalUrl = `${urlBase}/visor.html?id=${idBytebin}`;
-
+                // Guardar en el historial local
                 if (currentId) {
                     const item = history.find(h => h.id === currentId);
                     if(item) {
@@ -214,11 +213,11 @@ Ciclo: 1) Creación. 2) Transiciones. 3) Lacrado automático (si current_state =
                 }
 
                 copyToClipboard(finalUrl, "¡Link copiado! 🌐");
-                setTimeout(() => alert(`¡Éxito! Aplicación subida.\n\nLink: ${finalUrl}`), 100);
+                setTimeout(() => alert(`¡Éxito! Aplicación publicada en el servidor.\n\nLink público: ${finalUrl}`), 100);
 
             } catch (error) {
-                console.error("Error publicando en Bytebin:", error);
-                alert("Hubo un error al generar el link. Detalles: " + error.message);
+                console.error("Error publicando en el servidor:", error);
+                alert("Hubo un error al generar el link. Verifica que tu servidor Express esté corriendo en " + SERVER_URL + ".\n\nDetalles: " + error.message);
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
